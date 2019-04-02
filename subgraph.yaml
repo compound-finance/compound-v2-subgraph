@@ -1,0 +1,25 @@
+specVersion: 0.0.1
+description: Compound is an open-source protocol for algorithmic, efficient Money Markets on the Ethereum blockchain.
+repository: https://github.com/graphprotocol/compound-V2-subgraph
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: TODO
+    network: mainnet
+    source:
+      address: "TODO"
+      abi: TODO
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.1
+      language: wasm/assemblyscript
+      entities:
+        - TODO
+      abis:
+        - name: TODO
+          file: ./abis/TODO.json
+      eventHandlers:
+        - event: TODO(TODO,TODO,TODO,TODO,TODO)
+          handler: handleTODO
+      file: ./src/mappings/TODO.ts

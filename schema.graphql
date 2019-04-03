@@ -1,3 +1,54 @@
-type Todo @entity {
-    id: ID!
+
+# The supplyRateMantissa and borrowRateMantissa are the per block return on an asset borrowed/supplied
+type Market @entity {
+    id: ID!                         # asset address (i.e. actual token address)
+    assetTicker: String!
+    blockNumber: BigInt!            # block number the market is updated to, which is the last block a trade on this market occurred
+    interestRateModel: Bytes!       # address of the interestRateModel contract
+    totalSupply: BigInt!            # has 10 decimal points
+    perBlockSupplyInterest: BigInt! # to get APR(annual percentage rate) : perBlockSupplyInterest * 2102400 * 10 ^-18
+    supplyIndex: BigInt!            # The history of the markets supplyindex return since inception. (Think S&P 500)
+    totalBorrows: BigInt!           # has 10 decimal points
+    perBlockBorrowInterest: BigInt! # to get APR : perBlockBorrowInterest * 2102400 * 10 ^-18,
+    borrowIndex: BigInt!            # The history of the markets borrow index return since inception. (Think S&P 500)
+
+    # From PriceOracle.sol
+    priceInWei: BigInt!             # price is w.r.t. Wei. So If Ether is $150 USD, one Dai would be 1/150 * 10^18. To get asset prices in USD, divide this by DAIS priceInWei. Dai is obviously ~ $1.00
 }
+
+# note - account liqidity is how much ETH is available to be collaterailzed, but keep in mind it still needs to
+# meet the 150%. So 150 ETH would mean if you borrowed 100 ETH, it would go to 0 for liquidity. Can calculate
+# accountLiquidity with the following, but we just hit the smart contract getter instead:
+# values.value1.minus(values.value2.times(BigInt.fromI32(15).div(BigInt.fromI32(10))))
+type User @entity {
+    id: ID!                                         # user eth address
+    assets: [Asset!]! @derivedFrom(field: "user")   # derivedFrom will allow all UserAssets to have a one-to-many-relationship
+    accountLiquidity: BigInt!
+    totalSupplyInEth: BigInt!
+    totalBorrowInEth: BigInt!
+}
+
+# An Asset represents a User's ownership of CTokens
+# It must be its own entity type, so that we have a one to many relationship under User.assets
+type UserAsset @entity {
+    id: ID!                             # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
+    user: Bytes!                        # user address for one-to-many relationships
+    supplyPrincipal: BigInt             # total amount the user has supplied in this market
+
+    supplyInterestLastChange: BigInt    # TODO this gives you the true amount the contract has been updated (used in value below) might not work the same with cTokens - to see
+    totalSupplyInterest: BigInt         # TODO ahh here we add each round of interest
+
+    supplyInterestIndex: BigInt         # TODO The users personal return in supplying the asset (5.23% would be 1.05230 * 10^18). TODO - this was a direct contract call to the money market
+
+    # TODO - the same 3 todos above, for borrows!
+
+    borrowPrincipal: BigInt             # total amount the user has borrowed in this market
+
+    borrowInterestLastChange: BigInt    #? is only updated to the last event, event BorrowTaken and event BorrowRepaid. i.e. Per block interest isn't saved, since the blockchain also does not store this.
+    totalBorrowInterest: BigInt         #? adds together each round of borrowed asset, to record a cumulative amount, since it isn't stored anywhere in the smart contract (denominated in token, i.e. 1000 DAI)
+    borrowInterestIndex: BigInt         #? The users personal total return in borrowing this asset
+
+    transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
+    transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
+}
+

@@ -14,11 +14,11 @@ dataSources:
       kind: ethereum/events
       apiVersion: 0.0.1
       language: wasm/assemblyscript
-      file: ./src/mappings/cBAT.ts
+      file: ./src/mappings/cERC20.ts
       entities:
         - User
         - Market
-        - UserAssets
+        - UserAsset
       abis:
         - name: CErc20
           file: ./abis/CErc20.json
@@ -43,11 +43,11 @@ dataSources:
       kind: ethereum/events
       apiVersion: 0.0.1
       language: wasm/assemblyscript
-      file: ./src/mappings/cDAI.ts
+      file: ./src/mappings/cERC20.ts
       entities:
         - User
         - Market
-        - UserAssets
+        - UserAsset
       abis:
         - name: CErc20
           file: ./abis/CErc20.json
@@ -76,7 +76,7 @@ dataSources:
       entities:
         - User
         - Market
-        - UserAssets
+        - UserAsset
       abis:
         - name: CEther
           file: ./abis/CEther.json
@@ -101,11 +101,11 @@ dataSources:
       kind: ethereum/events
       apiVersion: 0.0.1
       language: wasm/assemblyscript
-      file: ./src/mappings/cREP.ts
+      file: ./src/mappings/cERC20.ts
       entities:
         - User
         - Market
-        - UserAssets
+        - UserAsset
       abis:
         - name: CErc20
           file: ./abis/CErc20.json
@@ -130,11 +130,11 @@ dataSources:
       kind: ethereum/events
       apiVersion: 0.0.1
       language: wasm/assemblyscript
-      file: ./src/mappings/cZRX.ts
+      file: ./src/mappings/cERC20.ts
       entities:
         - User
         - Market
-        - UserAssets
+        - UserAsset
       abis:
         - name: CErc20
           file: ./abis/CErc20.json

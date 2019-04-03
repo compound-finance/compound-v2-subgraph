@@ -5,21 +5,147 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum/contract
-    name: TODO
-    network: mainnet
+    name: cBAT
+    network: rinkeby
     source:
-      address: "TODO"
-      abi: TODO
+      address: "0x9636246bf34e688c6652af544418b38eb51d2c43"
+      abi: CErc20
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.1
       language: wasm/assemblyscript
+      file: ./src/mappings/cBAT.ts
       entities:
-        - TODO
+        - User
+        - Market
+        - UserAssets
       abis:
-        - name: TODO
-          file: ./abis/TODO.json
+        - name: CErc20
+          file: ./abis/CErc20.json
       eventHandlers:
-        - event: TODO(TODO,TODO,TODO,TODO,TODO)
-          handler: handleTODO
-      file: ./src/mappings/TODO.ts
+        - event: Mint(address,uint256,uint256)
+          handler: handleMint
+        - event: Redeem(address,uint256,uint256)
+          handler: handleRedeem
+        - event: Borrow(address,uint256,uint256,uint256)
+          handler: handleBorrow
+        - event: RepayBorrow(address,address,uint256,uint256,uint256)
+          handler: handleRepayBorrow
+        - event: LiquidateBorrow(address,address,uint256,address,uint256)
+          handler: handleLiquidateBorrow
+  - kind: ethereum/contract
+    name: cDAI
+    network: rinkeby
+    source:
+      address: "0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd"
+      abi: CErc20
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.1
+      language: wasm/assemblyscript
+      file: ./src/mappings/cDAI.ts
+      entities:
+        - User
+        - Market
+        - UserAssets
+      abis:
+        - name: CErc20
+          file: ./abis/CErc20.json
+      eventHandlers:
+        - event: Mint(address,uint256,uint256)
+          handler: handleMint
+        - event: Redeem(address,uint256,uint256)
+          handler: handleRedeem
+        - event: Borrow(address,uint256,uint256,uint256)
+          handler: handleBorrow
+        - event: RepayBorrow(address,address,uint256,uint256,uint256)
+          handler: handleRepayBorrow
+        - event: LiquidateBorrow(address,address,uint256,address,uint256)
+          handler: handleLiquidateBorrow
+  - kind: ethereum/contract
+    name: cETH
+    network: rinkeby
+    source:
+      address: "0x8a9447df1fb47209d36204e6d56767a33bf20f9f"
+      abi: CEther
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.1
+      language: wasm/assemblyscript
+      file: ./src/mappings/cETH.ts
+      entities:
+        - User
+        - Market
+        - UserAssets
+      abis:
+        - name: CEther
+          file: ./abis/CEther.json
+      eventHandlers:
+        - event: Mint(address,uint256,uint256)
+          handler: handleMint
+        - event: Redeem(address,uint256,uint256)
+          handler: handleRedeem
+        - event: Borrow(address,uint256,uint256,uint256)
+          handler: handleBorrow
+        - event: RepayBorrow(address,address,uint256,uint256,uint256)
+          handler: handleRepayBorrow
+        - event: LiquidateBorrow(address,address,uint256,address,uint256)
+          handler: handleLiquidateBorrow
+  - kind: ethereum/contract
+    name: cREP
+    network: rinkeby
+    source:
+      address: "0x0a1e4d0b5c71b955c0a5993023fc48ba6e380496"
+      abi: CErc20
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.1
+      language: wasm/assemblyscript
+      file: ./src/mappings/cREP.ts
+      entities:
+        - User
+        - Market
+        - UserAssets
+      abis:
+        - name: CErc20
+          file: ./abis/CErc20.json
+      eventHandlers:
+        - event: Mint(address,uint256,uint256)
+          handler: handleMint
+        - event: Redeem(address,uint256,uint256)
+          handler: handleRedeem
+        - event: Borrow(address,uint256,uint256,uint256)
+          handler: handleBorrow
+        - event: RepayBorrow(address,address,uint256,uint256,uint256)
+          handler: handleRepayBorrow
+        - event: LiquidateBorrow(address,address,uint256,address,uint256)
+          handler: handleLiquidateBorrow
+  - kind: ethereum/contract
+    name: cZRX
+    network: rinkeby
+    source:
+      address: "0x19787bcf63e228a6669d905e90af397dca313cfc"
+      abi: CErc20
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.1
+      language: wasm/assemblyscript
+      file: ./src/mappings/cZRX.ts
+      entities:
+        - User
+        - Market
+        - UserAssets
+      abis:
+        - name: CErc20
+          file: ./abis/CErc20.json
+      eventHandlers:
+        - event: Mint(address,uint256,uint256)
+          handler: handleMint
+        - event: Redeem(address,uint256,uint256)
+          handler: handleRedeem
+        - event: Borrow(address,uint256,uint256,uint256)
+          handler: handleBorrow
+        - event: RepayBorrow(address,address,uint256,uint256,uint256)
+          handler: handleRepayBorrow
+        - event: LiquidateBorrow(address,address,uint256,address,uint256)
+          handler: handleLiquidateBorrow

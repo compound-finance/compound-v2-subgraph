@@ -18,10 +18,13 @@ import {
 
 // TODO - handle approval? probably not but will double check
 
-/* User supplies assets into market and receives cTokens in exchange
- * Note - Transfer event also gets emitted, but some info is duplicate, so must handle so we don't
- *        double down on tokens
- *
+/*  User supplies assets into market and receives cTokens in exchange
+ *  Note - Transfer event also gets emitted, but some info is duplicate, so must handle so we
+ *  don't double down on tokens
+ *  event.mintAmount is the underlying asset
+ *  event.minttoknes is the ctokens
+ *  event.minter is the user
+ *  mints actually originate from the ctoken address, not 0x000000
  */
 export function handleMint(event: Mint): void {
   let userID = event.params.minter.toHex()
@@ -50,34 +53,41 @@ export function handleMint(event: Mint): void {
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-
-  // passes in a user, and the amount of token
-  // updates user
-  // updates UserAssetbalance
-  // event.mintAmount is the underlying asset
-  // event.minttoknes is the ctokens
-  // event.minter is the user
-  // mints actually originate from the ctoken address, not 0x000000
+  market.save()
 
   let userAssetID = market.symbol.concat('-').concat(userID)
   let userAsset = UserAsset.load(userAssetID)
   if(userAsset == null){
     userAsset = new UserAsset(userAssetID)
+    userAsset.user = event.params.minter
+    userAsset.transactionHashes = []
+    userAsset.transactionTimes = []
+
+    userAsset.reservePrincipal = BigInt.fromI32(0)
     userAsset.reserveBalance = BigInt.fromI32(0)
+    userAsset.cTokenIndex = BigInt.fromI32(0)
+
     userAsset.borrowPrincipal = BigInt.fromI32(0)
+    userAsset.borrowBalance = BigInt.fromI32(0)
+    userAsset.borrowIndex = BigInt.fromI32(0)
     userAsset.borrowIndex = BigInt.fromI32(0)
   }
+
+  let txHashes = userAsset.transactionHashes
+  txHashes.push(event.transaction.hash)
+  userAsset.transactionHashes = txHashes
+  let txTimes = userAsset.transactionTimes
+  txTimes.push(event.block.timestamp)
+  userAsset.transactionTimes = txTimes
+
   let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
   userAsset.cTokenBalance = accountSnapshot.value1
   userAsset.borrowBalance = accountSnapshot.value2
-  userAsset.reserveBalance = userAsset.reserveBalance.plus(event.params.mintAmount)
+  userAsset.reservePrincipal = userAsset.reservePrincipal.plus(event.params.mintAmount)
 
-  // still need
-    // cTokenIndex personal % (reserve inflation %)
-    // reserve Inflation real
-    // total borrow interest (in unit)
-    // total borrow index (in %)
-
+  userAsset.reserveBalance = userAsset.cTokenBalance.times(market.exchangeRate).minus(userAsset.reservePrincipal)
+  userAsset.cTokenIndex = userAsset.reserveBalance.div(userAsset.reservePrincipal)
+  userAsset.save()
 }
 
 export function handleRedeem(event: Redeem): void {

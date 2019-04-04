@@ -39,7 +39,7 @@ type UserAsset @entity {
     reservePrincipal: BigInt!           # total amount the user has supplied in this market
     cTokenBalance: BigInt!              # total ctokens the user owns of this asset
     reserveBalance: BigInt!             # Increase in Reserve balance due to inflation: (cTokenBalance * exchangeRate) - reserveBalance
-    ctokenIndex: BigInt!                # % Increase in Reserve balance due to inflation: (cTokenBalance * exchangeRate - reserveBalance) / reserveBalance
+    cTokenIndex: BigInt!                # % Increase in Reserve balance due to inflation: reserveBalance / reservePrincipal
 
     borrowPrincipal: BigInt!            # total borrow, exclusive of interest
     borrowBalance: BigInt!              # total borrow, inclusive of interest

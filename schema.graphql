@@ -1,4 +1,4 @@
-# The supplyRateMantissa and borrowRateMantissa are the per block return on an asset borrowed/supplied
+# note : cash + borrows = deposits + reserves
 type Market @entity {
     id: ID!                         # asset address (i.e. actual token address)
     symbol: String!                 # i.e. cDAI, cBAT, etc.
@@ -6,8 +6,10 @@ type Market @entity {
 
     totalSupply: BigInt!            # CToken total supply. CTokens have 10 decimal points
     exchangeRate: BigInt!           # Exchange rate between cTokens and reserves
-    totalReserves: BigInt!          # Total reserves stored in the market
+    totalReserves: BigInt!          # Reserves accrue from a small % of all interest being shaved off for the protocol
+    totalDeposits: BigInt!          # The total lending of erc20 or eth given to this contract
 
+    totalCash: BigInt!              # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.
     totalBorrows: BigInt!           # Total borrows for the market
     perBlockBorrowInterest: BigInt! # To get Annual Percent Return : perBlockBorrowInterest * 2102400 * 10 ^-18,
     borrowIndex: BigInt!            # The history of the markets borrow index return since inception. (Think S&P 500)
@@ -36,10 +38,10 @@ type UserAsset @entity {
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
 
-    reservePrincipal: BigInt!           # total amount the user has supplied in this market
     cTokenBalance: BigInt!              # total ctokens the user owns of this asset
-    reserveBalance: BigInt!             # Increase in Reserve balance due to inflation: (cTokenBalance * exchangeRate) - reserveBalance
-    cTokenIndex: BigInt!                # % Increase in Reserve balance due to inflation: reserveBalance / reservePrincipal
+    underlyingPrincipal: BigInt!        # Total amount the user has supplied of the underlying ERC20 or ETH
+    underlyingBalance: BigInt!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
+    underlyingIndex: BigInt!            # % Increase in underlying token due to inflation: underlyingBalance / underlyingPrincipal
 
     borrowPrincipal: BigInt!            # total borrow, exclusive of interest
     borrowBalance: BigInt!              # total borrow, inclusive of interest

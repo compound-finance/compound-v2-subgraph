@@ -1,4 +1,4 @@
-import {BigInt} from '@graphprotocol/graph-ts'
+import {BigInt, EthereumValue} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -6,14 +6,13 @@ import {
   RepayBorrow,
   LiquidateBorrow,
   Transfer,
-  CErc20
+  CErc20,
 } from '../types/cBAT/CErc20'
 
 import {
   Market,
   User,
   UserAsset,
-  CTok
 } from '../types/schema'
 
 // TODO - handle approval? probably not but will double check
@@ -53,6 +52,17 @@ export function handleMint(event: Mint): void {
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+
+  // Now we must get the true erc20 balance of the CErc20.sol contract
+  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
+  // And we don't have access to just ERC20.
+  let erc20TokenContract = CErc20.bind(contract.underlying())
+  let cash = erc20TokenContract.balanceOf(event.address)
+  market.totalCash = cash
+
+  //cash + borrows - reserves = deposits
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+
   market.save()
 
   let userAssetID = market.symbol.concat('-').concat(userID)
@@ -63,30 +73,33 @@ export function handleMint(event: Mint): void {
     userAsset.transactionHashes = []
     userAsset.transactionTimes = []
 
-    userAsset.reservePrincipal = BigInt.fromI32(0)
-    userAsset.reserveBalance = BigInt.fromI32(0)
-    userAsset.cTokenIndex = BigInt.fromI32(0)
+    userAsset.underlyingPrincipal = BigInt.fromI32(0)
+    userAsset.underlyingBalance = BigInt.fromI32(0)
+    userAsset.underlyingIndex = BigInt.fromI32(0)
 
     userAsset.borrowPrincipal = BigInt.fromI32(0)
     userAsset.borrowBalance = BigInt.fromI32(0)
     userAsset.borrowIndex = BigInt.fromI32(0)
-    userAsset.borrowIndex = BigInt.fromI32(0)
+    userAsset.borrowInterest = BigInt.fromI32(0)
   }
 
   let txHashes = userAsset.transactionHashes
   txHashes.push(event.transaction.hash)
   userAsset.transactionHashes = txHashes
   let txTimes = userAsset.transactionTimes
-  txTimes.push(event.block.timestamp)
+  txTimes.push(event.block.timestamp.toI32())
   userAsset.transactionTimes = txTimes
 
   let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
   userAsset.cTokenBalance = accountSnapshot.value1
   userAsset.borrowBalance = accountSnapshot.value2
-  userAsset.reservePrincipal = userAsset.reservePrincipal.plus(event.params.mintAmount)
+  userAsset.underlyingPrincipal = userAsset.underlyingPrincipal.plus(event.params.mintAmount)
 
-  userAsset.reserveBalance = userAsset.cTokenBalance.times(market.exchangeRate).minus(userAsset.reservePrincipal)
-  userAsset.cTokenIndex = userAsset.reserveBalance.div(userAsset.reservePrincipal)
+  // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
+  let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
+  userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
+
+  userAsset.underlyingIndex = userAsset.underlyingBalance.div(userAsset.underlyingPrincipal)
   userAsset.save()
 }
 

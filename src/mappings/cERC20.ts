@@ -63,13 +63,20 @@ export function handleMint(event: Mint): void {
   let userAsset = UserAsset.load(userAssetID)
   if(userAsset == null){
     userAsset = new UserAsset(userAssetID)
-
+    userAsset.reserveBalance = BigInt.fromI32(0)
+    userAsset.borrowPrincipal = BigInt.fromI32(0)
+    userAsset.borrowIndex = BigInt.fromI32(0)
   }
+  let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
+  userAsset.cTokenBalance = accountSnapshot.value1
+  userAsset.borrowBalance = accountSnapshot.value2
+  userAsset.reserveBalance = userAsset.reserveBalance.plus(event.params.mintAmount)
 
-  // funcs to call
-    // balanceOfUnderlying - the collateral token
-    // getAccountSnapShot - ctokenBalance, borrowBalance, ExjcnageRateMantissa
-        // this negates the need to call borrowBalanceStored, and exchangeRateStored
+  // still need
+    // cTokenIndex personal % (reserve inflation %)
+    // reserve Inflation real
+    // total borrow interest (in unit)
+    // total borrow index (in %)
 
 }
 

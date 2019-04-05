@@ -99,6 +99,7 @@ export function handleMint(event: Mint): void {
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
   userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
 
+  // TODO - incorporate BigDecimal
   userAsset.underlyingIndex = userAsset.underlyingBalance.div(userAsset.underlyingPrincipal)
   userAsset.save()
 }
@@ -120,5 +121,81 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 }
 
 export function handleTransfer(event: Transfer): void {
+  let userFromAddress = event.params.from
+  // We IGNORE updating user balances when transfer is from CErc20 address.
+  // this is because event Mint() already did the update, and is always emitted before Transfer
+  if (userFromAddress != event.address){
+    let marketID = event.address.toHex()
+    let market = Market.load(marketID)
+    let contract = CErc20.bind(event.address)
+
+    // Since transfer does not effect any coins or cTokens, it just transfers ctokens, we only update
+    // market values that are dependant on the block delta
+    market.borrowIndex = contract.borrowIndex()
+    market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+    market.save()
+
+    // here we update every field except underlyingPrincipal, since it is not dependant on interest rates
+    // we update here because the exchange rate stored for this user is likely behind, at least a few blocks
+    let userAssetFromID = market.symbol.concat('-').concat(userFromAddress.toHex())
+    let userAssetFrom = UserAsset.load(userAssetFromID)
+    let txHashesFrom = userAssetFrom.transactionHashes
+    txHashesFrom.push(event.transaction.hash)
+    userAssetFrom.transactionHashes = txHashesFrom
+    let txTimesFrom = userAssetFrom.transactionTimes
+    txTimesFrom.push(event.block.timestamp.toI32())
+    userAssetFrom.transactionTimes = txTimesFrom
+
+    let accountSnapshotFrom = contract.getAccountSnapshot(event.params.from)
+    userAssetFrom.cTokenBalance = accountSnapshotFrom.value1
+    userAssetFrom.borrowBalance = accountSnapshotFrom.value2
+
+    let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
+    userAssetFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt()
+
+    // TODO - incorporate BigDecimal
+    userAssetFrom.underlyingIndex = userAssetFrom.underlyingBalance.div(userAssetFrom.underlyingPrincipal)
+    userAssetFrom.save()
+
+    // USER TO
+    // We do the same for userTo as we did for userFrom, but check if user and userAsset entities are null
+    let userToID = event.params.to.toHex()
+    let userTo = User.load(userToID)
+    if(userTo == null){
+      userTo = new User(userToID)
+      userTo.assets = []
+      userTo.save()
+    }
+
+    let userAssetToID = market.symbol.concat('-').concat(userToID)
+    let userAssetTo = UserAsset.load(userAssetToID)
+    if (userAssetTo == null){
+      userAssetTo = new UserAsset(userToID)
+      userAssetTo.user = event.params.to
+      userAssetTo.transactionHashes = []
+      userAssetTo.transactionTimes = []
+
+      userAssetTo.underlyingPrincipal = BigInt.fromI32(0)
+      userAssetTo.underlyingBalance = BigInt.fromI32(0)
+      userAssetTo.underlyingIndex = BigInt.fromI32(0)
+
+      userAssetTo.borrowPrincipal = BigInt.fromI32(0)
+      userAssetTo.borrowBalance = BigInt.fromI32(0)
+      userAssetTo.borrowIndex = BigInt.fromI32(0)
+      userAssetTo.borrowInterest = BigInt.fromI32(0)
+    }
+
+    let accountSnapshotTo = contract.getAccountSnapshot(event.params.to)
+    userAssetTo.cTokenBalance = accountSnapshotTo.value1
+    userAssetTo.borrowBalance = accountSnapshotTo.value2
+
+    let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
+    userAssetTo.underlyingBalance = underlyingBalanceTo[0].toBigInt()
+
+    // TODO - incorporate BigDecimal
+    userAssetTo.underlyingIndex = userAssetTo.underlyingBalance.div(userAssetTo.underlyingPrincipal)
+    userAssetTo.save()
+
+  }
 
 }

@@ -42,10 +42,7 @@ type UserAsset @entity {
     underlyingSupplied: BigInt!         # Total amount the user has supplied of the underlying ERC20 or ETH
     underlyingRedeemed: BigInt!         # Total amount the user has redeemed of the underlying ERC20 or ETH
     underlyingBalance: BigInt!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
-
-    # % Increase in underlying token due to inflation: underlyingBalance / underlyingPrincipal. this is big Decimal because we do our own division
-    # Note this is only as accurate as the EVM. TODO - figure out if its okay we are getting slighly below 1 interest on very small numbers
-    underlyingIndex: BigDecimal!
+    interestEarned: BigInt!             # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
 
     borrowPrincipal: BigInt!            # total borrow, exclusive of interest
     borrowBalance: BigInt!              # total borrow, inclusive of interest

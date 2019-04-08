@@ -71,9 +71,10 @@ export function handleMint(event: Mint): void {
     userAsset.transactionHashes = []
     userAsset.transactionTimes = []
 
-    userAsset.underlyingPrincipal = BigInt.fromI32(0)
+    userAsset.underlyingSupplied = BigInt.fromI32(0)
+    userAsset.underlyingRedeemed = BigInt.fromI32(0)
     userAsset.underlyingBalance = BigInt.fromI32(0)
-    userAsset.underlyingIndex = BigDecimal.fromString("0")
+    userAsset.interestEarned = BigInt.fromI32(0)
     userAsset.cTokenBalance = BigInt.fromI32(0)
 
 
@@ -96,13 +97,13 @@ export function handleMint(event: Mint): void {
   // userAsset.borrowBalance = accountSnapshot.value2
 
 
-  userAsset.underlyingPrincipal = userAsset.underlyingPrincipal.plus(event.params.mintAmount)
+  userAsset.underlyingSupplied = userAsset.underlyingSupplied.plus(event.params.mintAmount)
 
   // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
   userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
 
-  userAsset.underlyingIndex = userAsset.underlyingBalance.toBigDecimal().div(userAsset.underlyingPrincipal.toBigDecimal()) // TODO - error , div by 0
+  userAsset.interestEarned = userAsset.underlyingBalance.minus(userAsset.underlyingSupplied).plus(userAsset.underlyingRedeemed)
   userAsset.save()
 }
 
@@ -141,6 +142,26 @@ export function handleRedeem(event: Redeem): void {
   let userAssetID = market.symbol.concat('-').concat(userID)
   let userAsset = UserAsset.load(userAssetID)
 
+  // not clear why this is needed, a redeemer should have existed already- TODO investigate
+  if (userAsset == null) {
+    userAsset = new UserAsset(userAssetID)
+    userAsset.user = event.params.redeemer
+    userAsset.transactionHashes = []
+    userAsset.transactionTimes = []
+
+    userAsset.underlyingSupplied = BigInt.fromI32(0)
+    userAsset.underlyingRedeemed = BigInt.fromI32(0)
+    userAsset.underlyingBalance = BigInt.fromI32(0)
+    userAsset.interestEarned = BigInt.fromI32(0)
+    userAsset.cTokenBalance = BigInt.fromI32(0)
+
+
+    userAsset.borrowPrincipal = BigInt.fromI32(0)
+    userAsset.borrowBalance = BigInt.fromI32(0)
+    userAsset.borrowIndex = BigInt.fromI32(0)
+    userAsset.borrowInterest = BigInt.fromI32(0)
+  }
+
   let txHashes = userAsset.transactionHashes
   txHashes.push(event.transaction.hash)
   userAsset.transactionHashes = txHashes
@@ -153,13 +174,13 @@ export function handleRedeem(event: Redeem): void {
   // userAsset.cTokenBalance = accountSnapshot.value1
   // userAsset.borrowBalance = accountSnapshot.value2
 
-  userAsset.underlyingPrincipal = userAsset.underlyingPrincipal.minus(event.params.redeemAmount)
+  userAsset.underlyingRedeemed = userAsset.underlyingRedeemed.plus(event.params.redeemAmount)
 
   // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
-  userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
+  userAsset.underlyingBalance = underlyingBalance[0].toBigInt() // TODO - sometimes this in negative when it really shouldnt be. could be rounding errors from EVM. its always at least 10 decimals. investigate
 
-  userAsset.underlyingIndex = userAsset.underlyingBalance.toBigDecimal().div(userAsset.underlyingPrincipal.toBigDecimal())
+  userAsset.interestEarned = userAsset.underlyingBalance.minus(userAsset.underlyingSupplied).plus(userAsset.underlyingRedeemed)
   userAsset.save()
 
 }
@@ -218,7 +239,7 @@ export function handleTransfer(event: Transfer): void {
   let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
   userAssetFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt()
 
-  userAssetFrom.underlyingIndex = userAssetFrom.underlyingBalance.toBigDecimal().div(userAssetFrom.underlyingPrincipal.toBigDecimal())
+  userAssetFrom.interestEarned = userAssetFrom.underlyingBalance.minus(userAssetFrom.underlyingSupplied).plus(userAssetFrom.underlyingRedeemed)
   userAssetFrom.save()
 
   /********** User To Below **********/
@@ -240,9 +261,11 @@ export function handleTransfer(event: Transfer): void {
     userAssetTo.transactionHashes = []
     userAssetTo.transactionTimes = []
 
-    userAssetTo.underlyingPrincipal = BigInt.fromI32(0)
+    userAssetTo.underlyingSupplied = BigInt.fromI32(0)
+    userAssetTo.underlyingRedeemed = BigInt.fromI32(0)
     userAssetTo.underlyingBalance = BigInt.fromI32(0)
-    userAssetTo.underlyingIndex = BigDecimal.fromString("0")
+    userAssetTo.interestEarned = BigInt.fromI32(0)
+    userAssetTo.cTokenBalance = BigInt.fromI32(0)
 
     userAssetTo.borrowPrincipal = BigInt.fromI32(0)
     userAssetTo.borrowBalance = BigInt.fromI32(0)
@@ -264,7 +287,7 @@ export function handleTransfer(event: Transfer): void {
   let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
   userAssetTo.underlyingBalance = underlyingBalanceTo[0].toBigInt()
 
-  userAssetTo.underlyingIndex = userAssetTo.underlyingBalance.toBigDecimal().div(userAssetTo.underlyingPrincipal.toBigDecimal())
+  userAssetTo.interestEarned = userAssetTo.underlyingBalance.minus(userAssetTo.underlyingSupplied).plus(userAssetTo.underlyingRedeemed)
   userAssetTo.save()
 
 }

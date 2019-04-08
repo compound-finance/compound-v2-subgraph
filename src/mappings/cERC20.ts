@@ -1,4 +1,4 @@
-import {BigInt, EthereumValue} from '@graphprotocol/graph-ts'
+import {BigInt, EthereumValue, BigDecimal} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -45,9 +45,7 @@ export function handleMint(event: Mint): void {
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply()
   market.exchangeRate = contract.exchangeRateStored() // this should be okay, but its not live, cant call the exchangeRateCurrent()
-
   market.totalReserves = contract.totalReserves()
-  // seems this is all that is needed for reserves? the other two above vals may replace the old
 
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
@@ -75,7 +73,7 @@ export function handleMint(event: Mint): void {
 
     userAsset.underlyingPrincipal = BigInt.fromI32(0)
     userAsset.underlyingBalance = BigInt.fromI32(0)
-    userAsset.underlyingIndex = BigInt.fromI32(0)
+    userAsset.underlyingIndex = BigDecimal.fromString("0")
     userAsset.cTokenBalance = BigInt.fromI32(0)
 
 
@@ -99,16 +97,70 @@ export function handleMint(event: Mint): void {
 
 
   userAsset.underlyingPrincipal = userAsset.underlyingPrincipal.plus(event.params.mintAmount)
+
   // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
   userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
 
-  // TODO - incorporate BigDecimal
-  userAsset.underlyingIndex = userAsset.underlyingBalance.div(userAsset.underlyingPrincipal)
+  userAsset.underlyingIndex = userAsset.underlyingBalance.toBigDecimal().div(userAsset.underlyingPrincipal.toBigDecimal()) // TODO - error , div by 0
   userAsset.save()
 }
 
+
+/*  User supplies cTokens into market and receives underlying asset in exchange
+ *  Note - Transfer event also gets emitted. no cToken updates in this mapping. All are in Transfer
+ *  event.redeemAmount is the underlying asset
+ *  event.redeemTokens is the ctokens
+ *  event.redeemer is the user
+ */
 export function handleRedeem(event: Redeem): void {
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  let contract = CErc20.bind(event.address)
+
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply()
+  market.exchangeRate = contract.exchangeRateStored() // this should be okay, but its not live, cant call the exchangeRateCurrent()
+  market.totalReserves = contract.totalReserves()
+
+  market.totalBorrows = contract.totalBorrows()
+  market.borrowIndex = contract.borrowIndex()
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+
+  // Now we must get the true erc20 balance of the CErc20.sol contract
+  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
+  // And we don't have access to just ERC20.
+  let erc20TokenContract = CErc20.bind(contract.underlying())
+  let cash = erc20TokenContract.balanceOf(event.address)
+  market.totalCash = cash
+  //cash + borrows - reserves = deposits
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
+
+  let userID = event.params.redeemer.toHex()
+  let userAssetID = market.symbol.concat('-').concat(userID)
+  let userAsset = UserAsset.load(userAssetID)
+
+  let txHashes = userAsset.transactionHashes
+  txHashes.push(event.transaction.hash)
+  userAsset.transactionHashes = txHashes
+  let txTimes = userAsset.transactionTimes
+  txTimes.push(event.block.timestamp.toI32())
+  userAsset.transactionTimes = txTimes
+
+  // We ignore this, in favour of always updating cTokens through Transfer event only
+  // let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
+  // userAsset.cTokenBalance = accountSnapshot.value1
+  // userAsset.borrowBalance = accountSnapshot.value2
+
+  userAsset.underlyingPrincipal = userAsset.underlyingPrincipal.minus(event.params.redeemAmount)
+
+  // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
+  let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
+  userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
+
+  userAsset.underlyingIndex = userAsset.underlyingBalance.toBigDecimal().div(userAsset.underlyingPrincipal.toBigDecimal())
+  userAsset.save()
 
 }
 
@@ -135,11 +187,6 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
  * value store in the smart contract
  */
 export function handleTransfer(event: Transfer): void {
-  let userFromAddress = event.params.from
-
-  // We IGNORE updating user balances when transfer is from CErc20 address.
-  // this is because event Mint() already did the update, and is always emitted before Transfer
-  // if (userFromAddress != event.address){
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
   let contract = CErc20.bind(event.address)
@@ -150,9 +197,11 @@ export function handleTransfer(event: Transfer): void {
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
   market.save()
 
-  // here we update every field except underlyingPrincipal, since it is not dependant on interest rates
+  /********** User From Below **********/
+
+    // here we update every field except underlyingPrincipal, since it is not dependant on interest rates
   // we update here because the exchange rate stored for this user is likely behind, at least a few blocks
-  let userAssetFromID = market.symbol.concat('-').concat(userFromAddress.toHex())
+  let userAssetFromID = market.symbol.concat('-').concat(event.params.from.toHex())
   let userAssetFrom = UserAsset.load(userAssetFromID)
 
   let txHashesFrom = userAssetFrom.transactionHashes
@@ -169,11 +218,11 @@ export function handleTransfer(event: Transfer): void {
   let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
   userAssetFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt()
 
-  // TODO - incorporate BigDecimal
-  userAssetFrom.underlyingIndex = userAssetFrom.underlyingBalance.div(userAssetFrom.underlyingPrincipal)
+  userAssetFrom.underlyingIndex = userAssetFrom.underlyingBalance.toBigDecimal().div(userAssetFrom.underlyingPrincipal.toBigDecimal())
   userAssetFrom.save()
 
-  // USER TO
+  /********** User To Below **********/
+
   // We do the same for userTo as we did for userFrom, but check if user and userAsset entities are null
   let userToID = event.params.to.toHex()
   let userTo = User.load(userToID)
@@ -193,7 +242,7 @@ export function handleTransfer(event: Transfer): void {
 
     userAssetTo.underlyingPrincipal = BigInt.fromI32(0)
     userAssetTo.underlyingBalance = BigInt.fromI32(0)
-    userAssetTo.underlyingIndex = BigInt.fromI32(0)
+    userAssetTo.underlyingIndex = BigDecimal.fromString("0")
 
     userAssetTo.borrowPrincipal = BigInt.fromI32(0)
     userAssetTo.borrowBalance = BigInt.fromI32(0)
@@ -215,10 +264,7 @@ export function handleTransfer(event: Transfer): void {
   let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
   userAssetTo.underlyingBalance = underlyingBalanceTo[0].toBigInt()
 
-  // TODO - incorporate BigDecimal
-  userAssetTo.underlyingIndex = userAssetTo.underlyingBalance.div(userAssetTo.underlyingPrincipal)
+  userAssetTo.underlyingIndex = userAssetTo.underlyingBalance.toBigDecimal().div(userAssetTo.underlyingPrincipal.toBigDecimal())
   userAssetTo.save()
-
-  // }
 
 }

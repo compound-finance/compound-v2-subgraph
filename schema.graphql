@@ -39,12 +39,27 @@ type UserAsset @entity {
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
 
     cTokenBalance: BigInt!              # total ctokens the user owns of this asset
-    underlyingPrincipal: BigInt!        # Total amount the user has supplied of the underlying ERC20 or ETH
+    underlyingSupplied: BigInt!         # Total amount the user has supplied of the underlying ERC20 or ETH
+    underlyingRedeemed: BigInt!         # Total amount the user has redeemed of the underlying ERC20 or ETH
     underlyingBalance: BigInt!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
-    underlyingIndex: BigInt!            # % Increase in underlying token due to inflation: underlyingBalance / underlyingPrincipal
+
+    # % Increase in underlying token due to inflation: underlyingBalance / underlyingPrincipal. this is big Decimal because we do our own division
+    # Note this is only as accurate as the EVM. TODO - figure out if its okay we are getting slighly below 1 interest on very small numbers
+    underlyingIndex: BigDecimal!
 
     borrowPrincipal: BigInt!            # total borrow, exclusive of interest
     borrowBalance: BigInt!              # total borrow, inclusive of interest
     borrowInterest: BigInt!             # Increase in Borrow  balance due to inflation: borrowBalance - borrowPrincipal
     borrowIndex: BigInt!                # % Increase in Borrow balance due to inflation: (borrowBalance - borrowPrincipal) / borrowPrincipal
 }
+
+# TODO - add in counting transfers of ctokens, and keeping it seperate from interest
+# The only way to make interest is by holding  Ctokens
+    # you can buy Ctoknes, and with that one purchase it is easy to tell how much you have made
+    # but when you start entering adn exiting the market , it gets confusing
+    # also gets confusing when you get transfered ctokens and you never bought before
+    # how does rbc do it?
+        # if I hadd more, my underlyingIndex goes down a lot, 110% doubled becomes 55%
+        # if i sold, i would still have same percentrage
+        # EDGE CASE - if you sell all, your personal index is 0. (ANY TIME IT RESETS TO ZERO, %'s are lost
+            # but you should record profit somewhere in units of token

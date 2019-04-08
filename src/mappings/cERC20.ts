@@ -266,8 +266,66 @@ export function handleBorrow(event: Borrow): void {
   userAsset.save()
 }
 
-export function handleRepayBorrow(event: RepayBorrow): void {
+/*
+ * event.params.totalBorrows = of the whole market
+ * event.params.accountBorrows = total of the account
+ * event.params.repayAmount = that was added in this event
+ * event.params.borrower = the borrower
+ * event.params.payer = the payer
+ */
 
+export function handleRepayBorrow(event: RepayBorrow): void {
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  let contract = CErc20.bind(event.address)
+
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply()
+  market.exchangeRate = contract.exchangeRateStored() // this should be okay, but its not live, cant call the exchangeRateCurrent()
+  market.totalReserves = contract.totalReserves()
+
+  market.totalBorrows = contract.totalBorrows()
+  market.borrowIndex = contract.borrowIndex()
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+
+  // Now we must get the true erc20 balance of the CErc20.sol contract
+  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
+  // And we don't have access to just ERC20.
+  let erc20TokenContract = CErc20.bind(contract.underlying())
+  let cash = erc20TokenContract.balanceOf(event.address)
+  market.totalCash = cash
+  //cash + borrows - reserves = deposits
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
+
+  /********** User Below **********/
+
+
+  let userID = event.params.borrower.toHex()
+  let userAssetID = market.symbol.concat('-').concat(userID)
+  let userAsset = UserAsset.load(userAssetID)
+  
+  let txHashes = userAsset.transactionHashes
+  txHashes.push(event.transaction.hash)
+  userAsset.transactionHashes = txHashes
+  let txTimes = userAsset.transactionTimes
+  txTimes.push(event.block.timestamp.toI32())
+  userAsset.transactionTimes = txTimes
+  userAsset.accrualBlockNumber = event.block.number
+
+  // We ignore this, in favour of always updating cTokens through Transfer event only
+  // let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
+  // userAsset.cTokenBalance = accountSnapshot.value1
+  // userAsset.borrowBalance = accountSnapshot.value2
+
+  userAsset.totalRepaid = userAsset.totalRepaid.plus(event.params.repayAmount)
+
+  // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
+  let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
+  userAsset.borrowBalance = borrowBalance[0].toBigInt() // TODO - sometimes this in negative when it really shouldnt be. could be rounding errors from EVM. its always at least 10 decimals. investigate
+
+  userAsset.borrowInterest = userAsset.borrowBalance.minus(userAsset.totalBorrowed).plus(userAsset.totalRepaid)
+  userAsset.save()
 }
 
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {

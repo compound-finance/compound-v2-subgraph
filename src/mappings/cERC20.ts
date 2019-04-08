@@ -60,8 +60,9 @@ export function handleMint(event: Mint): void {
 
   //cash + borrows - reserves = deposits
   market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
-
   market.save()
+
+  /********** User Below **********/
 
   let userAssetID = market.symbol.concat('-').concat(userID)
   let userAsset = UserAsset.load(userAssetID)
@@ -77,10 +78,9 @@ export function handleMint(event: Mint): void {
     userAsset.interestEarned = BigInt.fromI32(0)
     userAsset.cTokenBalance = BigInt.fromI32(0)
 
-
-    userAsset.borrowPrincipal = BigInt.fromI32(0)
+    userAsset.totalBorrowed = BigInt.fromI32(0)
+    userAsset.totalRepaid = BigInt.fromI32(0)
     userAsset.borrowBalance = BigInt.fromI32(0)
-    userAsset.borrowIndex = BigInt.fromI32(0)
     userAsset.borrowInterest = BigInt.fromI32(0)
   }
 
@@ -90,6 +90,7 @@ export function handleMint(event: Mint): void {
   let txTimes = userAsset.transactionTimes
   txTimes.push(event.block.timestamp.toI32())
   userAsset.transactionTimes = txTimes
+  userAsset.accrualBlockNumber = event.block.number
 
   // We ignore this, in favour of always updating cTokens through Transfer event only
   // let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
@@ -142,6 +143,8 @@ export function handleRedeem(event: Redeem): void {
   let userAssetID = market.symbol.concat('-').concat(userID)
   let userAsset = UserAsset.load(userAssetID)
 
+  /********** User Below **********/
+
   // not clear why this is needed, a redeemer should have existed already- TODO investigate
   if (userAsset == null) {
     userAsset = new UserAsset(userAssetID)
@@ -155,10 +158,9 @@ export function handleRedeem(event: Redeem): void {
     userAsset.interestEarned = BigInt.fromI32(0)
     userAsset.cTokenBalance = BigInt.fromI32(0)
 
-
-    userAsset.borrowPrincipal = BigInt.fromI32(0)
+    userAsset.totalBorrowed = BigInt.fromI32(0)
+    userAsset.totalRepaid = BigInt.fromI32(0)
     userAsset.borrowBalance = BigInt.fromI32(0)
-    userAsset.borrowIndex = BigInt.fromI32(0)
     userAsset.borrowInterest = BigInt.fromI32(0)
   }
 
@@ -168,6 +170,7 @@ export function handleRedeem(event: Redeem): void {
   let txTimes = userAsset.transactionTimes
   txTimes.push(event.block.timestamp.toI32())
   userAsset.transactionTimes = txTimes
+  userAsset.accrualBlockNumber = event.block.number
 
   // We ignore this, in favour of always updating cTokens through Transfer event only
   // let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
@@ -184,9 +187,83 @@ export function handleRedeem(event: Redeem): void {
   userAsset.save()
 
 }
-
+/*
+ * event.params.totalBorrows = of the whole market
+ * event.params.accountBorrows = total of the account
+ * event.params.borrowAmount = that was added in this event
+ * event.params.borrower = the user
+ */
 export function handleBorrow(event: Borrow): void {
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  let contract = CErc20.bind(event.address)
 
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply()
+  market.exchangeRate = contract.exchangeRateStored() // this should be okay, but its not live, cant call the exchangeRateCurrent()
+  market.totalReserves = contract.totalReserves()
+
+  market.totalBorrows = contract.totalBorrows()
+  market.borrowIndex = contract.borrowIndex()
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+
+  // Now we must get the true erc20 balance of the CErc20.sol contract
+  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
+  // And we don't have access to just ERC20.
+  let erc20TokenContract = CErc20.bind(contract.underlying())
+  let cash = erc20TokenContract.balanceOf(event.address)
+  market.totalCash = cash
+  //cash + borrows - reserves = deposits
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
+
+  /********** User Below **********/
+
+
+  let userID = event.params.borrower.toHex()
+  let userAssetID = market.symbol.concat('-').concat(userID)
+  let userAsset = UserAsset.load(userAssetID)
+
+  // this is needed, since you could lend in one asset and borrow in another
+  if (userAsset == null) {
+    userAsset = new UserAsset(userAssetID)
+    userAsset.user = event.params.borrower
+    userAsset.transactionHashes = []
+    userAsset.transactionTimes = []
+
+    userAsset.underlyingSupplied = BigInt.fromI32(0)
+    userAsset.underlyingRedeemed = BigInt.fromI32(0)
+    userAsset.underlyingBalance = BigInt.fromI32(0)
+    userAsset.interestEarned = BigInt.fromI32(0)
+    userAsset.cTokenBalance = BigInt.fromI32(0)
+
+    userAsset.totalBorrowed = BigInt.fromI32(0)
+    userAsset.totalRepaid = BigInt.fromI32(0)
+    userAsset.borrowBalance = BigInt.fromI32(0)
+    userAsset.borrowInterest = BigInt.fromI32(0)
+  }
+
+  let txHashes = userAsset.transactionHashes
+  txHashes.push(event.transaction.hash)
+  userAsset.transactionHashes = txHashes
+  let txTimes = userAsset.transactionTimes
+  txTimes.push(event.block.timestamp.toI32())
+  userAsset.transactionTimes = txTimes
+  userAsset.accrualBlockNumber = event.block.number
+
+  // We ignore this, in favour of always updating cTokens through Transfer event only
+  // let accountSnapshot = contract.getAccountSnapshot(event.params.minter)
+  // userAsset.cTokenBalance = accountSnapshot.value1
+  // userAsset.borrowBalance = accountSnapshot.value2
+
+  userAsset.totalBorrowed = userAsset.totalBorrowed.plus(event.params.borrowAmount)
+
+  // We use low level call here, since the function is not a view function. However, it still works, but gives the stored state of the most recent block update
+  let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
+  userAsset.borrowBalance = borrowBalance[0].toBigInt() // TODO - sometimes this in negative when it really shouldnt be. could be rounding errors from EVM. its always at least 10 decimals. investigate
+
+  userAsset.borrowInterest = userAsset.borrowBalance.minus(userAsset.totalBorrowed).plus(userAsset.totalRepaid)
+  userAsset.save()
 }
 
 export function handleRepayBorrow(event: RepayBorrow): void {
@@ -231,6 +308,8 @@ export function handleTransfer(event: Transfer): void {
   let txTimesFrom = userAssetFrom.transactionTimes
   txTimesFrom.push(event.block.timestamp.toI32())
   userAssetFrom.transactionTimes = txTimesFrom
+  userAssetFrom.accrualBlockNumber = event.block.number
+
 
   let accountSnapshotFrom = contract.getAccountSnapshot(event.params.from)
   userAssetFrom.cTokenBalance = accountSnapshotFrom.value1
@@ -267,9 +346,9 @@ export function handleTransfer(event: Transfer): void {
     userAssetTo.interestEarned = BigInt.fromI32(0)
     userAssetTo.cTokenBalance = BigInt.fromI32(0)
 
-    userAssetTo.borrowPrincipal = BigInt.fromI32(0)
+    userAssetTo.totalBorrowed = BigInt.fromI32(0)
+    userAssetTo.totalRepaid = BigInt.fromI32(0)
     userAssetTo.borrowBalance = BigInt.fromI32(0)
-    userAssetTo.borrowIndex = BigInt.fromI32(0)
     userAssetTo.borrowInterest = BigInt.fromI32(0)
   }
 
@@ -279,6 +358,7 @@ export function handleTransfer(event: Transfer): void {
   let txTimesTo = userAssetTo.transactionTimes
   txTimesTo.push(event.block.timestamp.toI32())
   userAssetTo.transactionTimes = txTimesTo
+  userAssetTo.accrualBlockNumber = event.block.number
 
   let accountSnapshotTo = contract.getAccountSnapshot(event.params.to)
   userAssetTo.cTokenBalance = accountSnapshotTo.value1

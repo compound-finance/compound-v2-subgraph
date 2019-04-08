@@ -37,6 +37,8 @@ type UserAsset @entity {
     user: Bytes!                        # user address for one-to-many relationships
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
+    accrualBlockNumber: BigInt!         # block number the user balances are updated to
+
 
     cTokenBalance: BigInt!              # total ctokens the user owns of this asset
     underlyingSupplied: BigInt!         # Total amount the user has supplied of the underlying ERC20 or ETH
@@ -44,10 +46,10 @@ type UserAsset @entity {
     underlyingBalance: BigInt!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
     interestEarned: BigInt!             # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
 
-    borrowPrincipal: BigInt!            # total borrow, exclusive of interest
-    borrowBalance: BigInt!              # total borrow, inclusive of interest
-    borrowInterest: BigInt!             # Increase in Borrow  balance due to inflation: borrowBalance - borrowPrincipal
-    borrowIndex: BigInt!                # % Increase in Borrow balance due to inflation: (borrowBalance - borrowPrincipal) / borrowPrincipal
+    totalBorrowed: BigInt!              # total borrow, exclusive of interest
+    totalRepaid: BigInt!                # total repaid
+    borrowBalance: BigInt!              # total borrow, inclusive of interest, that must be repaid
+    borrowInterest: BigInt!             # borrowInterest = borrowBalance - totalBorrowed + totalRepaid
 }
 
 # TODO - add in counting transfers of ctokens, and keeping it seperate from interest

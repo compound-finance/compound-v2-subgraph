@@ -7,17 +7,13 @@ type Market @entity {
     totalSupply: BigInt!            # CToken total supply. CTokens have 10 decimal points
     exchangeRate: BigInt!           # Exchange rate between cTokens and reserves
     totalReserves: BigInt!          # Reserves accrue from a small % of all interest being shaved off for the protocol
-    totalDeposits: BigInt!          # The total lending of erc20 or eth given to this contract
+    totalDeposits: BigInt           # The total lending of erc20 or eth given to this contract TODO - make non-null when CEth balance is queryable
+    perBlockSupplyInterest: BigInt! # Derived from borrowInterest : PRSI = borrowRate * (1-reserveFactor) * (totalBorrow / (underlyingCash + totalBorrows)). Supply APR = PRSI * 2102400 * 10^-18
 
-    totalCash: BigInt!              # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.
+    totalCash: BigInt               # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  TODO - make non-null when CEth balance is queryable
     totalBorrows: BigInt!           # Total borrows for the market
     perBlockBorrowInterest: BigInt! # To get Annual Percent Return : perBlockBorrowInterest * 2102400 * 10 ^-18,
     borrowIndex: BigInt!            # The history of the markets borrow index return since inception. (Think S&P 500)
-
-    # TODO - figure this out, if i can use and if i need. would get from the price oracle
-    # price is w.r.t. Wei. So If Ether is $150 USD, one Dai would be 1/150 * 10^18.
-    # To get asset prices in USD, divide this by DAIS priceInWei. Dai is obviously ~ $1.00
-    # priceInWei: BigInt
 }
 
 # Note - account liqidity is how much ETH is available to be collaterailzed, but keep in mind it still needs to

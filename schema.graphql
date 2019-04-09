@@ -8,7 +8,7 @@ type Market @entity {
     exchangeRate: BigInt!           # Exchange rate between cTokens and reserves
     totalReserves: BigInt!          # Reserves accrue from a small % of all interest being shaved off for the protocol
     totalDeposits: BigInt           # The total lending of erc20 or eth given to this contract TODO - make non-null when CEth balance is queryable
-    perBlockSupplyInterest: BigInt! # Derived from borrowInterest : PRSI = borrowRate * (1-reserveFactor) * (totalBorrow / (underlyingCash + totalBorrows)). Supply APR = PRSI * 2102400 * 10^-18
+    perBlockSupplyInterest: BigInt! # Derived from borrowInterest : PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
 
     totalCash: BigInt               # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  TODO - make non-null when CEth balance is queryable
     totalBorrows: BigInt!           # Total borrows for the market
@@ -24,6 +24,7 @@ type User @entity {
     accountLiquidity: BigInt                            # TODO - get from a function, prob in Comptroller
     totalSupplyInEth: BigInt                            # TODO - get from a function, prob in Comptroller
     totalBorrowInEth: BigInt                            # TODO - get from a function, prob in Comptroller
+    availableToBorrow: BigInt                           # TODO - add this in once the above three are added. based on collateral ratio
     countLiquidated: Int!                               # the amount of times this account has been liquidated
     countLiquidator: Int!                               # the amount of times this account has liquidated others
 }
@@ -36,7 +37,6 @@ type UserAsset @entity {
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
     accrualBlockNumber: BigInt!         # block number the user balances are updated to
-
 
     cTokenBalance: BigInt!              # total ctokens the user owns of this asset
     underlyingSupplied: BigInt!         # Total amount the user has supplied of the underlying ERC20 or ETH

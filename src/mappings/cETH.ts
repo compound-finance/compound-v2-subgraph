@@ -39,6 +39,8 @@ export function handleMint(event: Mint): void {
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -117,6 +119,8 @@ export function handleRedeem(event: Redeem): void {
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -171,6 +175,8 @@ export function handleBorrow(event: Borrow): void {
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -240,6 +246,8 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -284,6 +292,31 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 */
 
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
+  /********** Market Updates Below **********/
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  let contract = CEther.bind(event.address)
+
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply()
+  market.exchangeRate = contract.exchangeRateStored()
+  market.totalReserves = contract.totalReserves()
+  market.totalBorrows = contract.totalBorrows()
+  market.borrowIndex = contract.borrowIndex()
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Now we must get the true erc20 balance of the CErc20.sol contract
+  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
+  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
+  // let erc20TokenContract = CEther.bind(contract.underlying())
+  // let cash = erc20TokenContract.balanceOf(event.address)
+  // market.totalCash = cash
+  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
+
+  /********** User Updates Below **********/
   let liquidatorID = event.params.liquidator.toHex()
   let liquidator = User.load(liquidatorID)
   if (liquidator == null) {
@@ -322,6 +355,8 @@ export function handleTransfer(event: Transfer): void {
   // market values that are dependant on the block delta
   market.borrowIndex = contract.borrowIndex()
   market.perBlockBorrowInterest = contract.borrowRatePerBlock()
+  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
   market.save()
 
   /********** User From Updates Below **********/

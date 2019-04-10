@@ -12,7 +12,7 @@
     "watch-local": "graph deploy graphprotocol/compound-v2 --watch --debug --node http://127.0.0.1:8020/ --ipfs http://localhost:5001"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "git://github.com/graphprotocol/graph-cli",
-    "@graphprotocol/graph-ts": "git://github.com/graphprotocol/graph-ts"
+    "@graphprotocol/graph-cli": "^0.8.0",
+    "@graphprotocol/graph-ts": "^0.6.0"
   }
 }

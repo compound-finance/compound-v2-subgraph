@@ -1,4 +1,3 @@
-# Note - cash + borrows = deposits + reserves
 type Market @entity {
     id: ID!                         # asset address (i.e. actual token address)
     symbol: String!                 # i.e. cDAI, cBAT, etc.

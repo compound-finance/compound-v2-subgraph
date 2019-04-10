@@ -307,11 +307,10 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
-  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
-  // let erc20TokenContract = CEther.bind(contract.underlying())
-  // let cash = erc20TokenContract.balanceOf(event.address)
-  // market.totalCash = cash
-  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  let erc20TokenContract = CErc20.bind(contract.underlying())
+  let cash = erc20TokenContract.balanceOf(event.address)
+  market.totalCash = cash
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
   market.save()
 
   /********** User Updates Below **********/

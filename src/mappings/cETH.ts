@@ -1,4 +1,4 @@
-import {BigInt, EthereumValue} from '@graphprotocol/graph-ts'
+import {BigDecimal, BigInt, EthereumValue} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -14,6 +14,9 @@ import {
   User,
   UserAsset,
 } from '../types/schema'
+
+import {truncateBigDecimal} from "./helpers";
+
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -38,9 +41,19 @@ export function handleMint(event: Mint): void {
   market.totalReserves = contract.totalReserves()
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
-  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
-  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let prsi = market.totalBorrows.toBigDecimal()
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .times(BigDecimal.fromString("1000000000000000000"))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(prsi, 108)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -118,9 +131,19 @@ export function handleRedeem(event: Redeem): void {
   market.totalReserves = contract.totalReserves()
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
-  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
-  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let prsi = market.totalBorrows.toBigDecimal()
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .times(BigDecimal.fromString("1000000000000000000"))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(prsi, 108)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -174,9 +197,19 @@ export function handleBorrow(event: Borrow): void {
   market.totalReserves = contract.totalReserves()
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
-  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
-  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let prsi = market.totalBorrows.toBigDecimal()
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .times(BigDecimal.fromString("1000000000000000000"))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(prsi, 108)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -245,9 +278,19 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   market.totalReserves = contract.totalReserves()
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
-  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
-  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let prsi = market.totalBorrows.toBigDecimal()
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .times(BigDecimal.fromString("1000000000000000000"))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(prsi, 108)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -303,9 +346,19 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   market.totalReserves = contract.totalReserves()
   market.totalBorrows = contract.totalBorrows()
   market.borrowIndex = contract.borrowIndex()
-  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
-  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let prsi = market.totalBorrows.toBigDecimal()
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .times(BigDecimal.fromString("1000000000000000000"))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(prsi, 108)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -354,9 +407,19 @@ export function handleTransfer(event: Transfer): void {
   // Since transfer does not effect any coins or cTokens, it just transfers cTokens, we only update
   // market values that are dependant on the block delta
   market.borrowIndex = contract.borrowIndex()
-  market.perBlockBorrowInterest = contract.borrowRatePerBlock()
-  // PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
-  market.perBlockSupplyInterest = market.totalBorrows.times(market.perBlockBorrowInterest).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1000000000)).times(BigInt.fromI32(1).minus(contract.reserveFactorMantissa())).div(market.totalSupply.times(market.exchangeRate))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let prsi = market.totalBorrows.toBigDecimal()
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .times(BigDecimal.fromString("1000000000000000000"))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(prsi, 108)
   market.save()
 
   /********** User From Updates Below **********/

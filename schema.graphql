@@ -1,18 +1,18 @@
-type Market @entity {
-    id: ID!                         # asset address (i.e. actual token address)
-    symbol: String!                 # i.e. cDAI, cBAT, etc.
-    accrualBlockNumber: BigInt!     # block number the market is updated to, which is the last block a trade on this market occurred
+ type Market @entity {
+    id: ID!                             # asset address (i.e. actual token address)
+    symbol: String!                     # i.e. cDAI, cBAT, etc.
+    accrualBlockNumber: BigInt!         # block number the market is updated to, which is the last block a trade on this market occurred
 
-    totalSupply: BigInt!            # CToken total supply. CTokens have 10 decimal points
-    exchangeRate: BigInt!           # Exchange rate between cTokens and reserves
-    totalReserves: BigInt!          # Reserves accrue from a small % of all interest being shaved off for the protocol
-    totalDeposits: BigInt           # The total lending of erc20 or eth given to this contract TODO - make non-null when CEth balance is queryable
-    perBlockSupplyInterest: BigInt! # Derived from borrowInterest : PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400 * 10^-18
+    totalSupply: BigInt!                # CToken total supply. CTokens have 10 decimal points
+    exchangeRate: BigInt!               # Exchange rate between cTokens and reserves
+    totalReserves: BigInt!              # Reserves accrue from a small % of all interest being shaved off for the protocol
+    totalDeposits: BigInt               # The total lending of erc20 or eth given to this contract TODO - make non-null when CEth balance is queryable
+    perBlockSupplyInterest: BigDecimal! # Derived from borrowInterest : PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400
 
-    totalCash: BigInt               # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  TODO - make non-null when CEth balance is queryable
-    totalBorrows: BigInt!           # Total borrows for the market
-    perBlockBorrowInterest: BigInt! # To get Annual Percent Return : perBlockBorrowInterest * 2102400 * 10 ^-18,
-    borrowIndex: BigInt!            # The history of the markets borrow index return since inception. (Think S&P 500)
+    totalCash: BigInt                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  TODO - make non-null when CEth balance is queryable
+    totalBorrows: BigInt!               # Total borrows for the market
+    perBlockBorrowInterest: BigDecimal! # To get Annual Percent Return : perBlockBorrowInterest * 2102400
+    borrowIndex: BigInt!                # The history of the markets borrow index return since inception. (Think S&P 500)
 }
 
 # Note - account liqidity is how much ETH is available to be collaterailzed, but keep in mind it still needs to

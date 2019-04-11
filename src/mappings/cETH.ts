@@ -36,20 +36,21 @@ export function handleMint(event: Mint): void {
   }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
-  market.totalSupply = contract.totalSupply()
-  market.exchangeRate = contract.exchangeRateStored() // can't call, exchangeRateCurrent(), costs gas
-  market.totalReserves = contract.totalReserves()
-  market.totalBorrows = contract.totalBorrows()
-  market.borrowIndex = contract.borrowIndex()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("100000000000000000000000000"))  // 10^26... can't call, exchangeRateCurrent(), costs gas
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let prsi = market.totalBorrows.toBigDecimal()
+  let prsi = market.totalBorrows
     .times(market.perBlockBorrowInterest)
     .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
     .times(BigDecimal.fromString("1000000000000000000"))
 
   // Then truncate it to be 18 decimal points
@@ -84,15 +85,15 @@ export function handleMint(event: Mint): void {
     userAsset.user = event.params.minter
     userAsset.transactionHashes = []
     userAsset.transactionTimes = []
-    userAsset.underlyingSupplied = BigInt.fromI32(0)
-    userAsset.underlyingRedeemed = BigInt.fromI32(0)
-    userAsset.underlyingBalance = BigInt.fromI32(0)
-    userAsset.interestEarned = BigInt.fromI32(0)
-    userAsset.cTokenBalance = BigInt.fromI32(0)
-    userAsset.totalBorrowed = BigInt.fromI32(0)
-    userAsset.totalRepaid = BigInt.fromI32(0)
-    userAsset.borrowBalance = BigInt.fromI32(0)
-    userAsset.borrowInterest = BigInt.fromI32(0)
+    userAsset.underlyingSupplied = BigDecimal.fromString("0")
+    userAsset.underlyingRedeemed = BigDecimal.fromString("0")
+    userAsset.underlyingBalance =  BigDecimal.fromString("0")
+    userAsset.interestEarned =  BigDecimal.fromString("0")
+    userAsset.cTokenBalance = BigDecimal.fromString("0")
+    userAsset.totalBorrowed = BigDecimal.fromString("0")
+    userAsset.totalRepaid =  BigDecimal.fromString("0")
+    userAsset.borrowBalance = BigDecimal.fromString("0")
+    userAsset.borrowInterest =  BigDecimal.fromString("0")
   }
 
   let txHashes = userAsset.transactionHashes
@@ -106,8 +107,8 @@ export function handleMint(event: Mint): void {
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
-  userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
-  userAsset.underlyingSupplied = userAsset.underlyingSupplied.plus(event.params.mintAmount)
+  userAsset.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  userAsset.underlyingSupplied = userAsset.underlyingSupplied.plus(event.params.mintAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
   userAsset.interestEarned = userAsset.underlyingBalance.minus(userAsset.underlyingSupplied).plus(userAsset.underlyingRedeemed)
   userAsset.save()
 }
@@ -126,20 +127,21 @@ export function handleRedeem(event: Redeem): void {
   let contract = CEther.bind(event.address)
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
-  market.totalSupply = contract.totalSupply()
-  market.exchangeRate = contract.exchangeRateStored() // can't call, exchangeRateCurrent(), costs gas
-  market.totalReserves = contract.totalReserves()
-  market.totalBorrows = contract.totalBorrows()
-  market.borrowIndex = contract.borrowIndex()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("100000000000000000000000000"))  // 10^26... can't call, exchangeRateCurrent(), costs gas
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let prsi = market.totalBorrows.toBigDecimal()
+  let prsi = market.totalBorrows
     .times(market.perBlockBorrowInterest)
     .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
     .times(BigDecimal.fromString("1000000000000000000"))
 
   // Then truncate it to be 18 decimal points
@@ -173,8 +175,8 @@ export function handleRedeem(event: Redeem): void {
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
 
   // TODO - sometimes this in negative. could be rounding errors from EVM. its always at least 10 decimals. investigate
-  userAsset.underlyingBalance = underlyingBalance[0].toBigInt()
-  userAsset.underlyingRedeemed = userAsset.underlyingRedeemed.plus(event.params.redeemAmount)
+  userAsset.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  userAsset.underlyingRedeemed = userAsset.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
   userAsset.interestEarned = userAsset.underlyingBalance.minus(userAsset.underlyingSupplied).plus(userAsset.underlyingRedeemed)
   userAsset.save()
 }
@@ -192,20 +194,21 @@ export function handleBorrow(event: Borrow): void {
   let contract = CEther.bind(event.address)
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
-  market.totalSupply = contract.totalSupply()
-  market.exchangeRate = contract.exchangeRateStored()
-  market.totalReserves = contract.totalReserves()
-  market.totalBorrows = contract.totalBorrows()
-  market.borrowIndex = contract.borrowIndex()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("100000000000000000000000000"))  // 10^26... can't call, exchangeRateCurrent(), costs gas
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let prsi = market.totalBorrows.toBigDecimal()
+  let prsi = market.totalBorrows
     .times(market.perBlockBorrowInterest)
     .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
     .times(BigDecimal.fromString("1000000000000000000"))
 
   // Then truncate it to be 18 decimal points
@@ -231,17 +234,15 @@ export function handleBorrow(event: Borrow): void {
     userAsset.user = event.params.borrower
     userAsset.transactionHashes = []
     userAsset.transactionTimes = []
-
-    userAsset.underlyingSupplied = BigInt.fromI32(0)
-    userAsset.underlyingRedeemed = BigInt.fromI32(0)
-    userAsset.underlyingBalance = BigInt.fromI32(0)
-    userAsset.interestEarned = BigInt.fromI32(0)
-    userAsset.cTokenBalance = BigInt.fromI32(0)
-
-    userAsset.totalBorrowed = BigInt.fromI32(0)
-    userAsset.totalRepaid = BigInt.fromI32(0)
-    userAsset.borrowBalance = BigInt.fromI32(0)
-    userAsset.borrowInterest = BigInt.fromI32(0)
+    userAsset.underlyingSupplied = BigDecimal.fromString("0")
+    userAsset.underlyingRedeemed = BigDecimal.fromString("0")
+    userAsset.underlyingBalance =  BigDecimal.fromString("0")
+    userAsset.interestEarned =  BigDecimal.fromString("0")
+    userAsset.cTokenBalance = BigDecimal.fromString("0")
+    userAsset.totalBorrowed = BigDecimal.fromString("0")
+    userAsset.totalRepaid =  BigDecimal.fromString("0")
+    userAsset.borrowBalance = BigDecimal.fromString("0")
+    userAsset.borrowInterest =  BigDecimal.fromString("0")
   }
 
   let txHashes = userAsset.transactionHashes
@@ -253,8 +254,8 @@ export function handleBorrow(event: Borrow): void {
   userAsset.accrualBlockNumber = event.block.number
 
   let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  userAsset.borrowBalance = borrowBalance[0].toBigInt()
-  userAsset.totalBorrowed = userAsset.totalBorrowed.plus(event.params.borrowAmount)
+  userAsset.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  userAsset.totalBorrowed = userAsset.totalBorrowed.plus(event.params.borrowAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
   userAsset.borrowInterest = userAsset.borrowBalance.minus(userAsset.totalBorrowed).plus(userAsset.totalRepaid)
   userAsset.save()
 }
@@ -273,20 +274,21 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   let contract = CEther.bind(event.address)
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
-  market.totalSupply = contract.totalSupply()
-  market.exchangeRate = contract.exchangeRateStored()
-  market.totalReserves = contract.totalReserves()
-  market.totalBorrows = contract.totalBorrows()
-  market.borrowIndex = contract.borrowIndex()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("100000000000000000000000000"))  // 10^26... can't call, exchangeRateCurrent(), costs gas
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let prsi = market.totalBorrows.toBigDecimal()
+  let prsi = market.totalBorrows
     .times(market.perBlockBorrowInterest)
     .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
     .times(BigDecimal.fromString("1000000000000000000"))
 
   // Then truncate it to be 18 decimal points
@@ -315,8 +317,8 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   userAsset.accrualBlockNumber = event.block.number
 
   let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  userAsset.borrowBalance = borrowBalance[0].toBigInt()
-  userAsset.totalRepaid = userAsset.totalRepaid.plus(event.params.repayAmount)
+  userAsset.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  userAsset.totalRepaid = userAsset.totalRepaid.plus(event.params.repayAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
   userAsset.borrowInterest = userAsset.borrowBalance.minus(userAsset.totalBorrowed).plus(userAsset.totalRepaid)
   userAsset.save()
 }
@@ -341,20 +343,21 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   let contract = CEther.bind(event.address)
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
-  market.totalSupply = contract.totalSupply()
-  market.exchangeRate = contract.exchangeRateStored()
-  market.totalReserves = contract.totalReserves()
-  market.totalBorrows = contract.totalBorrows()
-  market.borrowIndex = contract.borrowIndex()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("100000000000000000000000000"))  // 10^26... can't call, exchangeRateCurrent(), costs gas
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let prsi = market.totalBorrows.toBigDecimal()
+  let prsi = market.totalBorrows
     .times(market.perBlockBorrowInterest)
     .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
     .times(BigDecimal.fromString("1000000000000000000"))
 
   // Then truncate it to be 18 decimal points
@@ -406,16 +409,16 @@ export function handleTransfer(event: Transfer): void {
 
   // Since transfer does not effect any coins or cTokens, it just transfers cTokens, we only update
   // market values that are dependant on the block delta
-  market.borrowIndex = contract.borrowIndex()
+  market.borrowIndex = contract.borrowIndex().toBigDecimal()
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let prsi = market.totalBorrows.toBigDecimal()
+  let prsi = market.totalBorrows
     .times(market.perBlockBorrowInterest)
     .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.toBigDecimal().times(market.exchangeRate.toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
     .times(BigDecimal.fromString("1000000000000000000"))
 
   // Then truncate it to be 18 decimal points
@@ -436,11 +439,11 @@ export function handleTransfer(event: Transfer): void {
 
 
   let accountSnapshotFrom = contract.getAccountSnapshot(event.params.from)
-  userAssetFrom.cTokenBalance = accountSnapshotFrom.value1
-  userAssetFrom.borrowBalance = accountSnapshotFrom.value2 // might as well update this, as it depends on block number
+  userAssetFrom.cTokenBalance = accountSnapshotFrom.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
+  userAssetFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
   let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
-  userAssetFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt()
+  userAssetFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   userAssetFrom.interestEarned = userAssetFrom.underlyingBalance.minus(userAssetFrom.underlyingSupplied).plus(userAssetFrom.underlyingRedeemed)
   userAssetFrom.save()
 
@@ -459,19 +462,19 @@ export function handleTransfer(event: Transfer): void {
   let userAssetToID = market.symbol.concat('-').concat(userToID)
   let userAssetTo = UserAsset.load(userAssetToID)
   if (userAssetTo == null) {
-    userAssetTo = new UserAsset(userToID)
+    userAssetTo = new UserAsset(userAssetToID)
     userAssetTo.user = event.params.to
     userAssetTo.transactionHashes = []
     userAssetTo.transactionTimes = []
-    userAssetTo.underlyingSupplied = BigInt.fromI32(0)
-    userAssetTo.underlyingRedeemed = BigInt.fromI32(0)
-    userAssetTo.underlyingBalance = BigInt.fromI32(0)
-    userAssetTo.interestEarned = BigInt.fromI32(0)
-    userAssetTo.cTokenBalance = BigInt.fromI32(0)
-    userAssetTo.totalBorrowed = BigInt.fromI32(0)
-    userAssetTo.totalRepaid = BigInt.fromI32(0)
-    userAssetTo.borrowBalance = BigInt.fromI32(0)
-    userAssetTo.borrowInterest = BigInt.fromI32(0)
+    userAssetTo.underlyingSupplied = BigDecimal.fromString("0")
+    userAssetTo.underlyingRedeemed = BigDecimal.fromString("0")
+    userAssetTo.underlyingBalance =  BigDecimal.fromString("0")
+    userAssetTo.interestEarned =  BigDecimal.fromString("0")
+    userAssetTo.cTokenBalance = BigDecimal.fromString("0")
+    userAssetTo.totalBorrowed = BigDecimal.fromString("0")
+    userAssetTo.totalRepaid =  BigDecimal.fromString("0")
+    userAssetTo.borrowBalance = BigDecimal.fromString("0")
+    userAssetTo.borrowInterest =  BigDecimal.fromString("0")
   }
 
   let txHashesTo = userAssetTo.transactionHashes
@@ -483,11 +486,11 @@ export function handleTransfer(event: Transfer): void {
   userAssetTo.accrualBlockNumber = event.block.number
 
   let accountSnapshotTo = contract.getAccountSnapshot(event.params.to)
-  userAssetTo.cTokenBalance = accountSnapshotTo.value1
-  userAssetTo.borrowBalance = accountSnapshotTo.value2 // might as well update this
+  userAssetTo.cTokenBalance = accountSnapshotTo.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
+  userAssetTo.borrowBalance = accountSnapshotTo.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
   let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
-  userAssetTo.underlyingBalance = underlyingBalanceTo[0].toBigInt()
+  userAssetTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   userAssetTo.interestEarned = userAssetTo.underlyingBalance.minus(userAssetTo.underlyingSupplied).plus(userAssetTo.underlyingRedeemed)
   userAssetTo.save()
 }

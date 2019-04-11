@@ -3,16 +3,16 @@
     symbol: String!                     # i.e. cDAI, cBAT, etc.
     accrualBlockNumber: BigInt!         # block number the market is updated to, which is the last block a trade on this market occurred
 
-    totalSupply: BigInt!                # CToken total supply. CTokens have 10 decimal points
-    exchangeRate: BigInt!               # Exchange rate between cTokens and reserves
-    totalReserves: BigInt!              # Reserves accrue from a small % of all interest being shaved off for the protocol
-    totalDeposits: BigInt               # The total lending of erc20 or eth given to this contract TODO - make non-null when CEth balance is queryable
+    totalSupply: BigDecimal!                # CToken total supply. CTokens have 10 decimal points. Must div by 10^10
+    exchangeRate:  BigDecimal!               # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply. i.e. erc20/ctokens. Must div by 10^26
+    totalReserves: BigDecimal!              # Reserves accrue from a small % of all interest being shaved off for the protocol. Must div by 10^18
+    totalDeposits: BigDecimal               # The total lending of erc20 or eth given to this contract. Must div by 10^18 TODO - make non-null when CEth balance is queryable
     perBlockSupplyInterest: BigDecimal! # Derived from borrowInterest : PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400
 
-    totalCash: BigInt                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  TODO - make non-null when CEth balance is queryable
-    totalBorrows: BigInt!               # Total borrows for the market
+    totalCash: BigDecimal                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  Must div by 10^18 TODO - make non-null when CEth balance is queryable
+    totalBorrows: BigDecimal!               # Total borrows for the market.  Must div by 10^18
     perBlockBorrowInterest: BigDecimal! # To get Annual Percent Return : perBlockBorrowInterest * 2102400
-    borrowIndex: BigInt!                # The history of the markets borrow index return since inception. (Think S&P 500)
+    borrowIndex: BigDecimal!                # The history of the markets borrow index return since inception. (Think S&P 500)
 }
 
 # Note - account liqidity is how much ETH is available to be collaterailzed, but keep in mind it still needs to
@@ -20,10 +20,10 @@
 type User @entity {
     id: ID!                                             # user eth address
     assets: [UserAsset!]! @derivedFrom(field: "user")   # derivedFrom will allow all UserAssets to have a one-to-many-relationship
-    accountLiquidity: BigInt                            # TODO - get from a function, prob in Comptroller
-    totalSupplyInEth: BigInt                            # TODO - get from a function, prob in Comptroller
-    totalBorrowInEth: BigInt                            # TODO - get from a function, prob in Comptroller
-    availableToBorrow: BigInt                           # TODO - add this in once the above three are added. based on collateral ratio
+    accountLiquidity: BigDecimal                             # TODO - get from a function, prob in Comptroller
+    totalSupplyInEth: BigDecimal                             # TODO - get from a function, prob in Comptroller
+    totalBorrowInEth: BigDecimal                             # TODO - get from a function, prob in Comptroller
+    availableToBorrow: BigDecimal                           # TODO - add this in once the above three are added. based on collateral ratio
     countLiquidated: Int!                               # the amount of times this account has been liquidated
     countLiquidator: Int!                               # the amount of times this account has liquidated others
 }
@@ -37,14 +37,14 @@ type UserAsset @entity {
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
     accrualBlockNumber: BigInt!         # block number the user balances are updated to
 
-    cTokenBalance: BigInt!              # total ctokens the user owns of this asset
-    underlyingSupplied: BigInt!         # Total amount the user has supplied of the underlying ERC20 or ETH
-    underlyingRedeemed: BigInt!         # Total amount the user has redeemed of the underlying ERC20 or ETH
-    underlyingBalance: BigInt!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
-    interestEarned: BigInt!             # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
+    cTokenBalance: BigDecimal!              # total ctokens the user owns of this asset
+    underlyingSupplied: BigDecimal!         # Total amount the user has supplied of the underlying ERC20 or ETH
+    underlyingRedeemed: BigDecimal!         # Total amount the user has redeemed of the underlying ERC20 or ETH
+    underlyingBalance: BigDecimal!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
+    interestEarned: BigDecimal!             # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
 
-    totalBorrowed: BigInt!              # total borrow, exclusive of interest
-    totalRepaid: BigInt!                # total repaid
-    borrowBalance: BigInt!              # total borrow, inclusive of interest, that must be repaid
-    borrowInterest: BigInt!             # borrowInterest = borrowBalance - totalBorrowed + totalRepaid
+    totalBorrowed: BigDecimal!              # total borrow, exclusive of interest
+    totalRepaid: BigDecimal!                # total repaid
+    borrowBalance: BigDecimal!              # total borrow, inclusive of interest, that must be repaid
+    borrowInterest: BigDecimal!             # borrowInterest = borrowBalance - totalBorrowed + totalRepaid
 }

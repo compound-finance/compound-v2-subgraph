@@ -2,6 +2,8 @@
     id: ID!                             # asset address (i.e. actual token address)
     symbol: String!                     # i.e. cDAI, cBAT, etc.
     accrualBlockNumber: BigInt!         # block number the market is updated to, which is the last block a trade on this market occurred
+    tokenPerEthRatio: BigDecimal!       # How many tokens equal 1 ETH. 0.007 would mean 142.86 DAI = 1 ETH
+    tokenPerUSDRatio: BigDecimal!       # How many tokens equal 1 USD. 19 would mean 1 REP = 19 USD. Note - based on DAI Price oracle
 
     totalSupply: BigDecimal!                # CToken total supply. CTokens have 10 decimal points. Must div by 10^10
     exchangeRate:  BigDecimal!               # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply. i.e. erc20/ctokens. Must div by 10^26

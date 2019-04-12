@@ -1,4 +1,4 @@
-import {BigInt, EthereumValue, BigDecimal} from '@graphprotocol/graph-ts'
+import {Address, EthereumValue, BigDecimal} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -15,7 +15,7 @@ import {
   CTokenStats,
 } from '../types/schema'
 
-import {truncateBigDecimal} from "./helpers";
+import {truncateBigDecimal, getTokenEthRatio} from "./helpers";
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -32,6 +32,13 @@ export function handleMint(event: Mint): void {
   if (market == null) {
     market = new Market(marketID)
     market.symbol = contract.symbol()
+    market.tokenPerEthRatio = getTokenEthRatio(market.symbol)
+    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
+    if (noTruncRatio.toString().length > 90){
+      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 90)
+    } else {
+      market.tokenPerUSDRatio = noTruncRatio
+    }
   }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()

@@ -33,7 +33,13 @@ export function handleMint(event: Mint): void {
   if (market == null) {
     market = new Market(marketID)
     market.symbol = contract.symbol()
-  }
+    market.tokenPerEthRatio = BigDecimal.fromString("1")
+    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
+    if (noTruncRatio.toString().length > 90){
+      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 90)
+    } else {
+      market.tokenPerUSDRatio = noTruncRatio
+    }  }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))

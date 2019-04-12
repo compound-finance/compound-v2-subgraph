@@ -15,7 +15,7 @@ import {
   CTokenStats,
 } from '../types/schema'
 
-import {truncateBigDecimal} from "./helpers";
+import {truncateBigDecimal, calculateLiquidty} from "./helpers";
 
 
 /*  User supplies assets into market and receives cTokens in exchange
@@ -123,6 +123,11 @@ export function handleMint(event: Mint): void {
   cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.minter).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  if (user.hasBorrowed == true){
+    calculateLiquidty(userID)
+  }
 }
 
 
@@ -194,6 +199,12 @@ export function handleRedeem(event: Redeem): void {
   cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.redeemer).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  let user = User.load(userID)
+  if (user.hasBorrowed == true){
+    calculateLiquidty(userID)
+  }
 }
 
 /* Borrow assets from the protocol
@@ -276,6 +287,12 @@ export function handleBorrow(event: Borrow): void {
   cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  let user = User.load(userID)
+  user.hasBorrowed = true
+  user.save()
+  calculateLiquidty(userID)
 }
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
@@ -342,6 +359,9 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  calculateLiquidty(userID)
 }
 
 /*
@@ -521,4 +541,12 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
   cTokenStatsTo.save()
+
+  /********** Liquidation Updates Below **********/
+  let userFromID = event.params.from.toHex()
+  let userFrom = User.load(userFromID)
+  if (userFrom.hasBorrowed == true){
+    calculateLiquidty(userFromID)
+  }
+  calculateLiquidty(userToID)
 }

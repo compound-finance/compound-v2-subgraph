@@ -38,7 +38,7 @@ export function getTokenEthRatio(symbol: string): BigDecimal {
 }
 
 
-function calculateLiquidty(userAddr: string):void{
+export function calculateLiquidty(userAddr: string):void{
   let totalSupplyInEth = BigDecimal.fromString("0")
   let totalBorrowInEth = BigDecimal.fromString("0")
 
@@ -47,10 +47,10 @@ function calculateLiquidty(userAddr: string):void{
     let daiMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
     let daiEthRatio = daiMarket.tokenPerEthRatio
     let daiBorrowInEth = dai.borrowBalance.times(daiEthRatio)
-    let daiSupplyInEtn = dai.underlyingBalance.times(daiEthRatio)
+    let daiSupplyInEth = dai.underlyingBalance.times(daiEthRatio)
 
     totalBorrowInEth = totalBorrowInEth.plus(daiBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(daiSupplyInEtn)
+    totalSupplyInEth = totalSupplyInEth.plus(daiSupplyInEth)
   }
 
   let rep = CTokenStats.load('cREP-'.concat(userAddr))
@@ -58,10 +58,10 @@ function calculateLiquidty(userAddr: string):void{
     let repMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
     let repEthRatio = repMarket.tokenPerEthRatio
     let repBorrowInEth = rep.borrowBalance.times(repEthRatio)
-    let repSupplyInEtn = rep.underlyingBalance.times(repEthRatio)
+    let repSupplyInEth = rep.underlyingBalance.times(repEthRatio)
 
     totalBorrowInEth = totalBorrowInEth.plus(repBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(repSupplyInEtn)
+    totalSupplyInEth = totalSupplyInEth.plus(repSupplyInEth)
   }
 
   let zrx = CTokenStats.load('cZRX-'.concat(userAddr))
@@ -69,30 +69,30 @@ function calculateLiquidty(userAddr: string):void{
     let zrxMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
     let zrxEthRatio = zrxMarket.tokenPerEthRatio
     let zrxBorrowInEth = zrx.borrowBalance.times(zrxEthRatio)
-    let zrxSupplyInEtn = zrx.underlyingBalance.times(zrxEthRatio)
+    let zrxSupplyInEth = zrx.underlyingBalance.times(zrxEthRatio)
 
     totalBorrowInEth = totalBorrowInEth.plus(zrxBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(zrxSupplyInEtn)
+    totalSupplyInEth = totalSupplyInEth.plus(zrxSupplyInEth)
   }
   let eth = CTokenStats.load('cETH-'.concat(userAddr))
   if (eth != null){
     let ethMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
     let ethEthRatio = ethMarket.tokenPerEthRatio
     let ethBorrowInEth = eth.borrowBalance.times(ethEthRatio)
-    let ethSupplyInEtn = eth.underlyingBalance.times(ethEthRatio)
+    let ethSupplyInEth = eth.underlyingBalance.times(ethEthRatio)
 
     totalBorrowInEth = totalBorrowInEth.plus(ethBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(ethSupplyInEtn)
+    totalSupplyInEth = totalSupplyInEth.plus(ethSupplyInEth)
   }
   let bat = CTokenStats.load('cBAT-'.concat(userAddr))
   if (bat != null){
     let batMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
     let batEthRatio = batMarket.tokenPerEthRatio
     let batBorrowInEth = bat.borrowBalance.times(batEthRatio)
-    let batSupplyInEtn = bat.underlyingBalance.times(batEthRatio)
+    let batSupplyInEth = bat.underlyingBalance.times(batEthRatio)
 
     totalBorrowInEth = totalBorrowInEth.plus(batBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(batSupplyInEtn)
+    totalSupplyInEth = totalSupplyInEth.plus(batSupplyInEth)
   }
 
   let user = User.load(userAddr)

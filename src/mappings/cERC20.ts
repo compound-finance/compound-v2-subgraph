@@ -15,7 +15,7 @@ import {
   CTokenStats,
 } from '../types/schema'
 
-import {truncateBigDecimal, getTokenEthRatio} from "./helpers";
+import {truncateBigDecimal, getTokenEthRatio, calculateLiquidty} from "./helpers";
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -86,6 +86,7 @@ export function handleMint(event: Mint): void {
     user.totalBorrowInEth = BigDecimal.fromString("0")
     user.totalSupplyInEth = BigDecimal.fromString("0")
     user.hasBorrowed = false
+    user.save()
   }
 
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
@@ -124,12 +125,9 @@ export function handleMint(event: Mint): void {
   cTokenStats.save()
 
   /********** Liquidity Calculations Below **********/
-  let liquidityAdded = event.params.mintAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
-  user.totalSupplyInEth = user.totalSupplyInEth.plus(liquidityAdded)
-  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
-  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
-  user.save()
-
+  if (user.hasBorrowed == true){
+    calculateLiquidty(userID)
+  }
 }
 
 
@@ -203,11 +201,9 @@ export function handleRedeem(event: Redeem): void {
 
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
-  let liquidityRemoved = event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
-  user.totalSupplyInEth = user.totalSupplyInEth.minus(liquidityRemoved)
-  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
-  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
-  user.save()
+  if (user.hasBorrowed == true){
+    calculateLiquidty(userID)
+  }
 }
 
 /* Borrow assets from the protocol
@@ -293,11 +289,9 @@ export function handleBorrow(event: Borrow): void {
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   user.hasBorrowed = true
-  let borrowAdded = event.params.borrowAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
-  user.totalBorrowInEth = user.totalBorrowInEth.plus(borrowAdded)
-  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
-  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
   user.save()
+  calculateLiquidty(userID)
+
 }
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
@@ -365,12 +359,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.save()
 
   /********** Liquidity Calculations Below **********/
-  let user = User.load(userID)
-  let borrowRepaid = event.params.repayAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
-  user.totalBorrowInEth = user.totalBorrowInEth.minus(borrowRepaid)
-  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
-  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
-  user.save()
+  calculateLiquidty(userID)
 }
 
 /*
@@ -504,10 +493,6 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
   cTokenStatsFrom.save()
 
-  let userFromID = event.params.from.toHex()
-  let userFrom = User.load(userFromID)
-
-
   /********** User To Updates Below **********/
   // We do the same for userTo as we did for userFrom, but check if user and cTokenStats entities are null
   let userToID = event.params.to.toHex()
@@ -557,4 +542,12 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
   cTokenStatsTo.save()
+
+  /********** Liquidation Updates Below **********/
+  let userFromID = event.params.from.toHex()
+  let userFrom = User.load(userFromID)
+  if (userFrom.hasBorrowed == true){
+    calculateLiquidty(userFromID)
+  }
+  calculateLiquidty(userToID)
 }

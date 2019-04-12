@@ -22,10 +22,10 @@
 type User @entity {
     id: ID!                                             # user eth address
     cTokens: [CTokenStats!]! @derivedFrom(field: "user")   # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
-    accountLiquidity: BigDecimal                        # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. is null if a user has never borrowed. Many users don't borrow, and just lend, and this prevents divide by 0
+    accountLiquidity: BigDecimal                        # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. 19.47 would imply you have 1947% more supply than borrow is null if a user has never borrowed. Many users don't borrow, and just lend, and this prevents divide by 0
     totalSupplyInEth: BigDecimal!                             # Add together all assets supplied
     totalBorrowInEth: BigDecimal!                             # Add together all assets borrowed from user
-    availableToBorrowEth: BigDecimal                         # accountLiquidity / 1.5. null means use has never borrowed TODO - ensure 1.5 collateral is read from Comptroller on mainnet (can change w/ gov)
+    availableToBorrowEth: BigDecimal                         # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed TODO - ensure 1.5 collateral is read from Comptroller on mainnet (can change w/ gov)
     countLiquidated: Int!                               # the amount of times this account has been liquidated
     countLiquidator: Int!                               # the amount of times this account has liquidated others
     hasBorrowed: Boolean!                               # If the user EVER borrows, make true. A small subset of users borrow. This makes liquidity calculations optimized

@@ -55,7 +55,7 @@ export function calculateLiquidty(userAddr: string):void{
 
   let rep = CTokenStats.load('cREP-'.concat(userAddr))
   if (rep != null){
-    let repMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
+    let repMarket = Market.load("0x0a1e4d0b5c71b955c0a5993023fc48ba6e380496") //9941
     let repEthRatio = repMarket.tokenPerEthRatio
     let repBorrowInEth = rep.borrowBalance.times(repEthRatio)
     let repSupplyInEth = rep.underlyingBalance.times(repEthRatio)
@@ -66,7 +66,7 @@ export function calculateLiquidty(userAddr: string):void{
 
   let zrx = CTokenStats.load('cZRX-'.concat(userAddr))
   if (zrx != null){
-    let zrxMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
+    let zrxMarket = Market.load("0x19787bcf63e228a6669d905e90af397dca313cfc") //9941
     let zrxEthRatio = zrxMarket.tokenPerEthRatio
     let zrxBorrowInEth = zrx.borrowBalance.times(zrxEthRatio)
     let zrxSupplyInEth = zrx.underlyingBalance.times(zrxEthRatio)
@@ -76,7 +76,7 @@ export function calculateLiquidty(userAddr: string):void{
   }
   let eth = CTokenStats.load('cETH-'.concat(userAddr))
   if (eth != null){
-    let ethMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
+    let ethMarket = Market.load("0x8a9447df1fb47209d36204e6d56767a33bf20f9f") //9941
     let ethEthRatio = ethMarket.tokenPerEthRatio
     let ethBorrowInEth = eth.borrowBalance.times(ethEthRatio)
     let ethSupplyInEth = eth.underlyingBalance.times(ethEthRatio)
@@ -86,7 +86,7 @@ export function calculateLiquidty(userAddr: string):void{
   }
   let bat = CTokenStats.load('cBAT-'.concat(userAddr))
   if (bat != null){
-    let batMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
+    let batMarket = Market.load("0x9636246bf34e688c6652af544418b38eb51d2c43") //9941
     let batEthRatio = batMarket.tokenPerEthRatio
     let batBorrowInEth = bat.borrowBalance.times(batEthRatio)
     let batSupplyInEth = bat.underlyingBalance.times(batEthRatio)
@@ -99,6 +99,6 @@ export function calculateLiquidty(userAddr: string):void{
   user.totalBorrowInEth = totalBorrowInEth
   user.totalSupplyInEth = totalSupplyInEth
   user.accountLiquidity = totalSupplyInEth.div(totalBorrowInEth)
-  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
+  user.availableToBorrowEth = user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth)
   user.save()
 }

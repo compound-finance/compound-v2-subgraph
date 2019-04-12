@@ -359,7 +359,13 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.save()
 
   /********** Liquidity Calculations Below **********/
-  calculateLiquidty(userID)
+  // calculateLiquidty(userID)
+    // TODO - not sure why the above doesnt work, TO INVESTIGATE. we are failing with a divide by 0 . might be okay. need to think through situation
+    // todo - well it is still failing here. it might be that an account can go back down to 0, and then it "exists". so rework the equation so no divide by zero. i believe this is possible
+  let user = User.load(userID)
+  if (user.hasBorrowed == true){
+    calculateLiquidty(userID)
+  }
 }
 
 /*

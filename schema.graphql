@@ -19,7 +19,7 @@
 # meet the 150%. So 150 ETH would mean if you borrowed 100 ETH, it would go to 0 for liquidity.
 type User @entity {
     id: ID!                                             # user eth address
-    assets: [UserAsset!]! @derivedFrom(field: "user")   # derivedFrom will allow all UserAssets to have a one-to-many-relationship
+    cTokens: [CTokenStats!]! @derivedFrom(field: "user")   # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
     accountLiquidity: BigDecimal                             # TODO - get from a function, prob in Comptroller
     totalSupplyInEth: BigDecimal                             # TODO - get from a function, prob in Comptroller
     totalBorrowInEth: BigDecimal                             # TODO - get from a function, prob in Comptroller
@@ -28,9 +28,9 @@ type User @entity {
     countLiquidator: Int!                               # the amount of times this account has liquidated others
 }
 
-# An Asset represents a User's ownership of CTokens
-# It must be its own entity type, so that we have a one to many relationship under User.assets
-type UserAsset @entity {
+# CToken stats for a single users borrow and supply of an asset
+# It must be its own entity type, so that we have a one to many relationship under User.cTokens
+type CTokenStats @entity {
     id: ID!                             # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     user: Bytes!                        # user address for one-to-many relationships
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp

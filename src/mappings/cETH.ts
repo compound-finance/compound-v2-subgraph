@@ -12,7 +12,7 @@ import {
 import {
   Market,
   User,
-  UserAsset,
+  CTokenStats,
 } from '../types/schema'
 
 import {truncateBigDecimal} from "./helpers";
@@ -74,45 +74,46 @@ export function handleMint(event: Mint): void {
   let user = User.load(userID)
   if (user == null) {
     user = new User(userID)
-    user.assets = []
+    user.cTokens = []
     user.countLiquidated = 0
     user.countLiquidator = 0
     user.save()
   }
 
-  let userAssetID = market.symbol.concat('-').concat(userID)
-  let userAsset = UserAsset.load(userAssetID)
-  if (userAsset == null) {
-    userAsset = new UserAsset(userAssetID)
-    userAsset.user = event.params.minter
-    userAsset.transactionHashes = []
-    userAsset.transactionTimes = []
-    userAsset.underlyingSupplied = BigDecimal.fromString("0")
-    userAsset.underlyingRedeemed = BigDecimal.fromString("0")
-    userAsset.underlyingBalance =  BigDecimal.fromString("0")
-    userAsset.interestEarned =  BigDecimal.fromString("0")
-    userAsset.cTokenBalance = BigDecimal.fromString("0")
-    userAsset.totalBorrowed = BigDecimal.fromString("0")
-    userAsset.totalRepaid =  BigDecimal.fromString("0")
-    userAsset.borrowBalance = BigDecimal.fromString("0")
-    userAsset.borrowInterest =  BigDecimal.fromString("0")
+  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStats = CTokenStats.load(cTokenStatsID)
+  if (cTokenStats == null) {
+    cTokenStats = new CTokenStats(cTokenStatsID)
+    cTokenStats.user = event.params.minter
+    cTokenStats.transactionHashes = []
+    cTokenStats.transactionTimes = []
+    cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
+    cTokenStats.underlyingRedeemed = BigDecimal.fromString("0")
+    cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
+    cTokenStats.interestEarned =  BigDecimal.fromString("0")
+    cTokenStats.cTokenBalance = BigDecimal.fromString("0")
+    cTokenStats.totalBorrowed = BigDecimal.fromString("0")
+    cTokenStats.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStats.borrowBalance = BigDecimal.fromString("0")
+    cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
 
-  let txHashes = userAsset.transactionHashes
+  let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
-  userAsset.transactionHashes = txHashes
-  let txTimes = userAsset.transactionTimes
+  cTokenStats.transactionHashes = txHashes
+  let txTimes = cTokenStats.transactionTimes
   txTimes.push(event.block.timestamp.toI32())
-  userAsset.transactionTimes = txTimes
-  userAsset.accrualBlockNumber = event.block.number
+  cTokenStats.transactionTimes = txTimes
+  cTokenStats.accrualBlockNumber = event.block.number
 
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
-  userAsset.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.underlyingSupplied = userAsset.underlyingSupplied.plus(event.params.mintAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.interestEarned = userAsset.underlyingBalance.minus(userAsset.underlyingSupplied).plus(userAsset.underlyingRedeemed)
-  userAsset.save()
+  cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStats.underlyingSupplied = cTokenStats.underlyingSupplied.plus(event.params.mintAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
+  cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
+  cTokenStats.cTokenBalance = contract.balanceOf(event.params.minter).toBigDecimal().div(BigDecimal.fromString("100000000"))
+  cTokenStats.save()
 }
 
 
@@ -162,27 +163,28 @@ export function handleRedeem(event: Redeem): void {
   market.save()
 
   let userID = event.params.redeemer.toHex()
-  let userAssetID = market.symbol.concat('-').concat(userID)
-  let userAsset = UserAsset.load(userAssetID)
+  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStats = CTokenStats.load(cTokenStatsID)
 
   /********** User Updates Below **********/ //
-  let txHashes = userAsset.transactionHashes
+  let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
-  userAsset.transactionHashes = txHashes
-  let txTimes = userAsset.transactionTimes
+  cTokenStats.transactionHashes = txHashes
+  let txTimes = cTokenStats.transactionTimes
   txTimes.push(event.block.timestamp.toI32())
-  userAsset.transactionTimes = txTimes
-  userAsset.accrualBlockNumber = event.block.number
+  cTokenStats.transactionTimes = txTimes
+  cTokenStats.accrualBlockNumber = event.block.number
 
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
 
   // TODO - sometimes this in negative. could be rounding errors from EVM. its always at least 10 decimals. investigate
-  userAsset.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.underlyingRedeemed = userAsset.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.interestEarned = userAsset.underlyingBalance.minus(userAsset.underlyingSupplied).plus(userAsset.underlyingRedeemed)
-  userAsset.save()
+  cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
+  cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
+  cTokenStats.cTokenBalance = contract.balanceOf(event.params.redeemer).toBigDecimal().div(BigDecimal.fromString("100000000"))
+  cTokenStats.save()
 }
 
 /* Borrow assets from the protocol
@@ -231,39 +233,40 @@ export function handleBorrow(event: Borrow): void {
 
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
-  let userAssetID = market.symbol.concat('-').concat(userID)
-  let userAsset = UserAsset.load(userAssetID)
+  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStats = CTokenStats.load(cTokenStatsID)
 
   // this is needed, since you could lend in one asset and borrow in another
-  if (userAsset == null) {
-    userAsset = new UserAsset(userAssetID)
-    userAsset.user = event.params.borrower
-    userAsset.transactionHashes = []
-    userAsset.transactionTimes = []
-    userAsset.underlyingSupplied = BigDecimal.fromString("0")
-    userAsset.underlyingRedeemed = BigDecimal.fromString("0")
-    userAsset.underlyingBalance =  BigDecimal.fromString("0")
-    userAsset.interestEarned =  BigDecimal.fromString("0")
-    userAsset.cTokenBalance = BigDecimal.fromString("0")
-    userAsset.totalBorrowed = BigDecimal.fromString("0")
-    userAsset.totalRepaid =  BigDecimal.fromString("0")
-    userAsset.borrowBalance = BigDecimal.fromString("0")
-    userAsset.borrowInterest =  BigDecimal.fromString("0")
+  if (cTokenStats == null) {
+    cTokenStats = new CTokenStats(cTokenStatsID)
+    cTokenStats.user = event.params.borrower
+    cTokenStats.transactionHashes = []
+    cTokenStats.transactionTimes = []
+    cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
+    cTokenStats.underlyingRedeemed = BigDecimal.fromString("0")
+    cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
+    cTokenStats.interestEarned =  BigDecimal.fromString("0")
+    cTokenStats.cTokenBalance = BigDecimal.fromString("0")
+    cTokenStats.totalBorrowed = BigDecimal.fromString("0")
+    cTokenStats.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStats.borrowBalance = BigDecimal.fromString("0")
+    cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
 
-  let txHashes = userAsset.transactionHashes
+  let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
-  userAsset.transactionHashes = txHashes
-  let txTimes = userAsset.transactionTimes
+  cTokenStats.transactionHashes = txHashes
+  let txTimes = cTokenStats.transactionTimes
   txTimes.push(event.block.timestamp.toI32())
-  userAsset.transactionTimes = txTimes
-  userAsset.accrualBlockNumber = event.block.number
+  cTokenStats.transactionTimes = txTimes
+  cTokenStats.accrualBlockNumber = event.block.number
 
   let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  userAsset.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.totalBorrowed = userAsset.totalBorrowed.plus(event.params.borrowAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.borrowInterest = userAsset.borrowBalance.minus(userAsset.totalBorrowed).plus(userAsset.totalRepaid)
-  userAsset.save()
+  cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStats.totalBorrowed = cTokenStats.totalBorrowed.plus(event.params.borrowAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
+  cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
+  cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
+  cTokenStats.save()
 }
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
@@ -313,22 +316,23 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
-  let userAssetID = market.symbol.concat('-').concat(userID)
-  let userAsset = UserAsset.load(userAssetID)
+  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStats = CTokenStats.load(cTokenStatsID)
 
-  let txHashes = userAsset.transactionHashes
+  let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
-  userAsset.transactionHashes = txHashes
-  let txTimes = userAsset.transactionTimes
+  cTokenStats.transactionHashes = txHashes
+  let txTimes = cTokenStats.transactionTimes
   txTimes.push(event.block.timestamp.toI32())
-  userAsset.transactionTimes = txTimes
-  userAsset.accrualBlockNumber = event.block.number
+  cTokenStats.transactionTimes = txTimes
+  cTokenStats.accrualBlockNumber = event.block.number
 
   let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  userAsset.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.totalRepaid = userAsset.totalRepaid.plus(event.params.repayAmount.toBigDecimal()).div(BigDecimal.fromString("1000000000000000000"))
-  userAsset.borrowInterest = userAsset.borrowBalance.minus(userAsset.totalBorrowed).plus(userAsset.totalRepaid)
-  userAsset.save()
+  cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStats.totalRepaid = cTokenStats.totalRepaid.plus(event.params.repayAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
+  cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
+  cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
+  cTokenStats.save()
 }
 
 /*
@@ -389,7 +393,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
     liquidator = new User(liquidatorID)
     liquidator.countLiquidated = 0
     liquidator.countLiquidator = 0
-    liquidator.assets = []
+    liquidator.cTokens = []
     liquidator.save()
   }
   liquidator.countLiquidator = liquidator.countLiquidator + 1
@@ -435,71 +439,71 @@ export function handleTransfer(event: Transfer): void {
   market.save()
 
   /********** User From Updates Below **********/
-  let userAssetFromID = market.symbol.concat('-').concat(event.params.from.toHex())
-  let userAssetFrom = UserAsset.load(userAssetFromID)
+  let cTokenStatsFromID = market.symbol.concat('-').concat(event.params.from.toHex())
+  let cTokenStatsFrom = CTokenStats.load(cTokenStatsFromID)
 
-  let txHashesFrom = userAssetFrom.transactionHashes
+  let txHashesFrom = cTokenStatsFrom.transactionHashes
   txHashesFrom.push(event.transaction.hash)
-  userAssetFrom.transactionHashes = txHashesFrom
-  let txTimesFrom = userAssetFrom.transactionTimes
+  cTokenStatsFrom.transactionHashes = txHashesFrom
+  let txTimesFrom = cTokenStatsFrom.transactionTimes
   txTimesFrom.push(event.block.timestamp.toI32())
-  userAssetFrom.transactionTimes = txTimesFrom
-  userAssetFrom.accrualBlockNumber = event.block.number
+  cTokenStatsFrom.transactionTimes = txTimesFrom
+  cTokenStatsFrom.accrualBlockNumber = event.block.number
 
 
   let accountSnapshotFrom = contract.getAccountSnapshot(event.params.from)
-  userAssetFrom.cTokenBalance = accountSnapshotFrom.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
-  userAssetFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
+  cTokenStatsFrom.cTokenBalance = accountSnapshotFrom.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
+  cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
   let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
-  userAssetFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  userAssetFrom.interestEarned = userAssetFrom.underlyingBalance.minus(userAssetFrom.underlyingSupplied).plus(userAssetFrom.underlyingRedeemed)
-  userAssetFrom.save()
+  cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
+  cTokenStatsFrom.save()
 
   /********** User To Updates Below **********/
-    // We do the same for userTo as we did for userFrom, but check if user and userAsset entities are null
+    // We do the same for userTo as we did for userFrom, but check if user and cTokenStats entities are null
   let userToID = event.params.to.toHex()
   let userTo = User.load(userToID)
   if (userTo == null) {
     userTo = new User(userToID)
-    userTo.assets = []
+    userTo.cTokens = []
     userTo.countLiquidated = 0
     userTo.countLiquidator = 0
     userTo.save()
   }
 
-  let userAssetToID = market.symbol.concat('-').concat(userToID)
-  let userAssetTo = UserAsset.load(userAssetToID)
-  if (userAssetTo == null) {
-    userAssetTo = new UserAsset(userAssetToID)
-    userAssetTo.user = event.params.to
-    userAssetTo.transactionHashes = []
-    userAssetTo.transactionTimes = []
-    userAssetTo.underlyingSupplied = BigDecimal.fromString("0")
-    userAssetTo.underlyingRedeemed = BigDecimal.fromString("0")
-    userAssetTo.underlyingBalance =  BigDecimal.fromString("0")
-    userAssetTo.interestEarned =  BigDecimal.fromString("0")
-    userAssetTo.cTokenBalance = BigDecimal.fromString("0")
-    userAssetTo.totalBorrowed = BigDecimal.fromString("0")
-    userAssetTo.totalRepaid =  BigDecimal.fromString("0")
-    userAssetTo.borrowBalance = BigDecimal.fromString("0")
-    userAssetTo.borrowInterest =  BigDecimal.fromString("0")
+  let cTokenStatsToID = market.symbol.concat('-').concat(userToID)
+  let cTokenStatsTo = CTokenStats.load(cTokenStatsToID)
+  if (cTokenStatsTo == null) {
+    cTokenStatsTo = new CTokenStats(cTokenStatsToID)
+    cTokenStatsTo.user = event.params.to
+    cTokenStatsTo.transactionHashes = []
+    cTokenStatsTo.transactionTimes = []
+    cTokenStatsTo.underlyingSupplied = BigDecimal.fromString("0")
+    cTokenStatsTo.underlyingRedeemed = BigDecimal.fromString("0")
+    cTokenStatsTo.underlyingBalance =  BigDecimal.fromString("0")
+    cTokenStatsTo.interestEarned =  BigDecimal.fromString("0")
+    cTokenStatsTo.cTokenBalance = BigDecimal.fromString("0")
+    cTokenStatsTo.totalBorrowed = BigDecimal.fromString("0")
+    cTokenStatsTo.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStatsTo.borrowBalance = BigDecimal.fromString("0")
+    cTokenStatsTo.borrowInterest =  BigDecimal.fromString("0")
   }
 
-  let txHashesTo = userAssetTo.transactionHashes
+  let txHashesTo = cTokenStatsTo.transactionHashes
   txHashesTo.push(event.transaction.hash)
-  userAssetTo.transactionHashes = txHashesTo
-  let txTimesTo = userAssetTo.transactionTimes
+  cTokenStatsTo.transactionHashes = txHashesTo
+  let txTimesTo = cTokenStatsTo.transactionTimes
   txTimesTo.push(event.block.timestamp.toI32())
-  userAssetTo.transactionTimes = txTimesTo
-  userAssetTo.accrualBlockNumber = event.block.number
+  cTokenStatsTo.transactionTimes = txTimesTo
+  cTokenStatsTo.accrualBlockNumber = event.block.number
 
   let accountSnapshotTo = contract.getAccountSnapshot(event.params.to)
-  userAssetTo.cTokenBalance = accountSnapshotTo.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
-  userAssetTo.borrowBalance = accountSnapshotTo.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
+  cTokenStatsTo.cTokenBalance = accountSnapshotTo.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
+  cTokenStatsTo.borrowBalance = accountSnapshotTo.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
   let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
-  userAssetTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  userAssetTo.interestEarned = userAssetTo.underlyingBalance.minus(userAssetTo.underlyingSupplied).plus(userAssetTo.underlyingRedeemed)
-  userAssetTo.save()
+  cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
+  cTokenStatsTo.save()
 }

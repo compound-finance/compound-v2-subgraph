@@ -83,6 +83,9 @@ export function handleMint(event: Mint): void {
     user.cTokens = []
     user.countLiquidated = 0
     user.countLiquidator = 0
+    user.totalBorrowInEth = BigDecimal.fromString("0")
+    user.totalSupplyInEth = BigDecimal.fromString("0")
+    user.hasBorrowed = false
     user.save()
   }
 
@@ -400,6 +403,9 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
     liquidator.countLiquidated = 0
     liquidator.countLiquidator = 0
     liquidator.cTokens = []
+    liquidator.totalBorrowInEth = BigDecimal.fromString("0")
+    liquidator.totalSupplyInEth = BigDecimal.fromString("0")
+    liquidator.hasBorrowed = false
     liquidator.save()
   }
   liquidator.countLiquidator = liquidator.countLiquidator + 1
@@ -475,6 +481,9 @@ export function handleTransfer(event: Transfer): void {
     userTo.cTokens = []
     userTo.countLiquidated = 0
     userTo.countLiquidator = 0
+    userTo.totalBorrowInEth = BigDecimal.fromString("0")
+    userTo.totalSupplyInEth = BigDecimal.fromString("0")
+    userTo.hasBorrowed = false
     userTo.save()
   }
 

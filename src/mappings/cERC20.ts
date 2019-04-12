@@ -83,7 +83,9 @@ export function handleMint(event: Mint): void {
     user.cTokens = []
     user.countLiquidated = 0
     user.countLiquidator = 0
-    user.save()
+    user.totalBorrowInEth = BigDecimal.fromString("0")
+    user.totalSupplyInEth = BigDecimal.fromString("0")
+    user.hasBorrowed = false
   }
 
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
@@ -120,6 +122,14 @@ export function handleMint(event: Mint): void {
   cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.minter).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  let liquidityAdded = event.params.mintAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
+  user.totalSupplyInEth = user.totalSupplyInEth.plus(liquidityAdded)
+  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
+  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
+  user.save()
+
 }
 
 
@@ -190,6 +200,14 @@ export function handleRedeem(event: Redeem): void {
   cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.redeemer).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  let user = User.load(userID)
+  let liquidityRemoved = event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
+  user.totalSupplyInEth = user.totalSupplyInEth.minus(liquidityRemoved)
+  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
+  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
+  user.save()
 }
 
 /* Borrow assets from the protocol
@@ -271,6 +289,15 @@ export function handleBorrow(event: Borrow): void {
   cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  let user = User.load(userID)
+  user.hasBorrowed = true
+  let borrowAdded = event.params.borrowAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
+  user.totalBorrowInEth = user.totalBorrowInEth.plus(borrowAdded)
+  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
+  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
+  user.save()
 }
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
@@ -336,6 +363,14 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
+
+  /********** Liquidity Calculations Below **********/
+  let user = User.load(userID)
+  let borrowRepaid = event.params.repayAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")).times(market.tokenPerEthRatio)
+  user.totalBorrowInEth = user.totalBorrowInEth.minus(borrowRepaid)
+  user.accountLiquidity = user.totalSupplyInEth.div(user.totalBorrowInEth)
+  user.availableToBorrowEth = user.accountLiquidity.div(BigDecimal.fromString("1.5"))
+  user.save()
 }
 
 /*
@@ -396,7 +431,9 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
     liquidator.countLiquidated = 0
     liquidator.countLiquidator = 0
     liquidator.cTokens = []
-    liquidator.save()
+    liquidator.totalBorrowInEth = BigDecimal.fromString("0")
+    liquidator.totalSupplyInEth = BigDecimal.fromString("0")
+    liquidator.hasBorrowed = false
   }
   liquidator.countLiquidator = liquidator.countLiquidator + 1
   liquidator.save()
@@ -405,6 +442,10 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   let borrower = User.load(borrowerID)
   borrower.countLiquidated = borrower.countLiquidated + 1
   borrower.save()
+
+  // note - no liquidity calculations needed here. They are handled in Transfer event
+  //        which is always triggered by a liquidation
+
 }
 
 /* Possible ways to emit Transfer:
@@ -463,6 +504,10 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
   cTokenStatsFrom.save()
 
+  let userFromID = event.params.from.toHex()
+  let userFrom = User.load(userFromID)
+
+
   /********** User To Updates Below **********/
   // We do the same for userTo as we did for userFrom, but check if user and cTokenStats entities are null
   let userToID = event.params.to.toHex()
@@ -472,6 +517,9 @@ export function handleTransfer(event: Transfer): void {
     userTo.cTokens = []
     userTo.countLiquidated = 0
     userTo.countLiquidator = 0
+    userTo.totalBorrowInEth = BigDecimal.fromString("0")
+    userTo.totalSupplyInEth = BigDecimal.fromString("0")
+    userTo.hasBorrowed = false
     userTo.save()
   }
 
@@ -510,4 +558,3 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
   cTokenStatsTo.save()
 }
-

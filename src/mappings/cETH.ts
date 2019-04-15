@@ -7,6 +7,7 @@ import {
   LiquidateBorrow,
   Transfer,
   CEther,
+  AccrueInterest,
 } from '../types/cETH/CEther'
 
 import {
@@ -15,8 +16,7 @@ import {
   CTokenStats,
 } from '../types/schema'
 
-import {truncateBigDecimal, calculateLiquidty} from "./helpers";
-
+import {truncateBigDecimal, calculateLiquidty, getTokenEthRatio} from "./helpers";
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -35,11 +35,8 @@ export function handleMint(event: Mint): void {
     market.symbol = contract.symbol()
     market.tokenPerEthRatio = BigDecimal.fromString("1")
     let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-    if (noTruncRatio.toString().length > 90){
       market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
-    } else {
-      market.tokenPerUSDRatio = noTruncRatio
-    }  }
+  }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -64,14 +61,10 @@ export function handleMint(event: Mint): void {
   // Then truncate it to be 18 decimal points
   market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
-  // Now we must get the true erc20 balance of the CErc20.sol contract
-  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
-  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
-  // let erc20TokenContract = CEther.bind(contract.underlying())
-  // let cash = erc20TokenContract.balanceOf(event.address)
-  // market.totalCash = cash
-  // // deposits = cash + borrows - reserves
-  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  // Now we must get the true eth balance of the CEther.sol contract
+  market.totalCash = contract.getCash().toBigDecimal()
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
   market.save()
 
   /********** User Below **********/
@@ -166,14 +159,10 @@ export function handleRedeem(event: Redeem): void {
   // Then truncate it to be 18 decimal points
   market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
-  // Now we must get the true erc20 balance of the CErc20.sol contract
-  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
-  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
-  // let erc20TokenContract = CEther.bind(contract.underlying())
-  // let cash = erc20TokenContract.balanceOf(event.address)
-  // market.totalCash = cash
-  // //  deposits = cash + borrows - reserves
-  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  // Now we must get the true eth balance of the CEther.sol contract
+  market.totalCash = contract.getCash().toBigDecimal()
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
   market.save()
 
   let userID = event.params.redeemer.toHex()
@@ -193,7 +182,6 @@ export function handleRedeem(event: Redeem): void {
   // However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
 
-  // TODO - sometimes this in negative. could be rounding errors from EVM. its always at least 10 decimals. investigate
   cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
   cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
@@ -242,13 +230,10 @@ export function handleBorrow(event: Borrow): void {
   // Then truncate it to be 18 decimal points
   market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
-  // Now we must get the true erc20 balance of the CErc20.sol contract
-  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
-  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
-  // let erc20TokenContract = CEther.bind(contract.underlying())
-  // let cash = erc20TokenContract.balanceOf(event.address)
-  // market.totalCash = cash
-  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  // Now we must get the true eth balance of the CEther.sol contract
+  market.totalCash = contract.getCash().toBigDecimal()
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
   market.save()
 
   /********** User Updates Below **********/
@@ -331,13 +316,10 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   // Then truncate it to be 18 decimal points
   market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
-  // Now we must get the true erc20 balance of the CErc20.sol contract
-  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
-  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
-  // let erc20TokenContract = CEther.bind(contract.underlying())
-  // let cash = erc20TokenContract.balanceOf(event.address)
-  // market.totalCash = cash
-  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  // Now we must get the true eth balance of the CEther.sol contract
+  market.totalCash = contract.getCash().toBigDecimal()
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
   market.save()
 
   /********** User Updates Below **********/
@@ -406,13 +388,10 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   // Then truncate it to be 18 decimal points
   market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
-  // Now we must get the true erc20 balance of the CErc20.sol contract
-  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
-  // TODO - Either Compound makes ether cash a public function we can call, or graph software has to read ether balances
-  // let erc20TokenContract = CEther.bind(contract.underlying())
-  // let cash = erc20TokenContract.balanceOf(event.address)
-  // market.totalCash = cash
-  // market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  // Now we must get the true eth balance of the CEther.sol contract
+  market.totalCash = contract.getCash().toBigDecimal()
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
   market.save()
 
   /********** User Updates Below **********/
@@ -549,4 +528,47 @@ export function handleTransfer(event: Transfer): void {
     calculateLiquidty(userFromID)
   }
   calculateLiquidty(userToID)
+}
+
+export function handleAccrueInterest(event: AccrueInterest): void {
+  /********** Market Updates Below **********/
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  let contract = CEther.bind(event.address)
+  if (market == null) {
+    market = new Market(marketID)
+    market.symbol = contract.symbol()
+    market.tokenPerEthRatio = BigDecimal.fromString("1")
+    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
+    market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+  }
+
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+
+  // 10^28, removing 10^18 for exp precision, and then token precision / ctoken precision -> 10^18/10^8 = 10^10
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("10000000000000000000000000000"))
+
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let pbsi = market.totalBorrows
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+
+  // Now we must get the true eth balance of the CEther.sol contract
+  market.totalCash = contract.getCash().toBigDecimal()
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
 }

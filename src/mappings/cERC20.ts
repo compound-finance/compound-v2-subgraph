@@ -6,6 +6,7 @@ import {
   RepayBorrow,
   LiquidateBorrow,
   Transfer,
+  AccrueInterest,
   CErc20,
 } from '../types/cBAT/CErc20'
 
@@ -34,11 +35,7 @@ export function handleMint(event: Mint): void {
     market.symbol = contract.symbol()
     market.tokenPerEthRatio = getTokenEthRatio(market.symbol)
     let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-    // if (noTruncRatio.toString().length > 90){
-      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
-    // } else {
-    //   market.tokenPerUSDRatio = noTruncRatio
-    // }
+    market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
   }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
@@ -192,7 +189,6 @@ export function handleRedeem(event: Redeem): void {
   // However, it still works, but gives the stored state of the most recent block update
   let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
 
-  // TODO - sometimes this in negative. could be rounding errors from EVM. its always at least 10 decimals. investigate
   cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
   cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
@@ -553,4 +549,53 @@ export function handleTransfer(event: Transfer): void {
     calculateLiquidty(userFromID)
   }
   calculateLiquidty(userToID)
+}
+
+export function handleAccrueInterest(event: AccrueInterest): void {
+  /********** Market Updates Below **********/
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  let contract = CErc20.bind(event.address)
+
+  // Accrue interest can be called before mint event, so this must be here
+  if (market == null) {
+    market = new Market(marketID)
+    market.symbol = contract.symbol()
+    market.tokenPerEthRatio = getTokenEthRatio(market.symbol)
+    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
+    market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+  }
+
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+
+  // 10^28, removing 10^18 for exp precision, and then token precision / ctoken precision -> 10^18/10^8 = 10^10
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("10000000000000000000000000000"))
+
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
+  let pbsi = market.totalBorrows
+    .times(market.perBlockBorrowInterest)
+    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
+    .div(market.totalSupply.times(market.exchangeRate))
+
+  // Then truncate it to be 18 decimal points
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+
+  // Now we must get the true erc20 balance of the CErc20.sol contract
+  // Note we use the CErc20 interface because it is inclusive of ERC20s interface
+  let erc20TokenContract = CErc20.bind(contract.underlying())
+  let cash = erc20TokenContract.balanceOf(event.address)
+  market.totalCash = cash.toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
 }

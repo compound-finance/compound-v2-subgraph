@@ -8,10 +8,10 @@
     totalSupply: BigDecimal!                # CToken total supply. CTokens have 8 decimal points
     exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply. i.e. erc20 / CTokens
     totalReserves: BigDecimal!              # Reserves accrue by shaving off a small percentage of all borrow interest
-    totalDeposits: BigDecimal               # The total lending of erc20 or eth given to this contract. TODO - make non-null when CEth balance is queryable
+    totalDeposits: BigDecimal               # The total lending of erc20 or eth given to this contract.
     perBlockSupplyInterest: BigDecimal!     # PBSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate). Supply APR = PRSI * 2102400. Derived from borrow interest
 
-    totalCash: BigDecimal                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol. TODO - make non-null when CEth balance is queryable
+    totalCash: BigDecimal                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.
     totalBorrows: BigDecimal!               # Total borrows for the market
     perBlockBorrowInterest: BigDecimal!     # To get Annual Percent Return (APR) : perBlockBorrowInterest * 2102400
     borrowIndex: BigDecimal!                # The history of the markets borrow index return since inception. (Think S&P 500)
@@ -25,7 +25,7 @@ type User @entity {
     totalSupplyInEth: BigDecimal!                           # Add together all assets supplied
     totalBorrowInEth: BigDecimal!                           # Add together all assets borrowed from user
     accountLiquidity: BigDecimal                            # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. If null, it means the user currently has no borrows in the protocol
-    availableToBorrowEth: BigDecimal                        # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null, it means the user currently has no borrows in the protocol TODO - ensure 1.5 collateral is read from Comptroller on mainnet (can change w/ gov)
+    availableToBorrowEth: BigDecimal                        # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null, it means the user currently has no borrows in the protocol. NOTE - collateral will not always be 1.5, this needs to be checked out when Comptroller is released
     countLiquidated: Int!                                   # the amount of times this account has been liquidated
     countLiquidator: Int!                                   # the amount of times this account has liquidated others
     hasBorrowed: Boolean!                                   # If the user EVER borrows, make true. A small subset of users borrow. This makes liquidity calculations optimized
@@ -44,7 +44,7 @@ type CTokenStats @entity {
     underlyingSupplied: BigDecimal!     # Total amount the user has supplied of the underlying ERC20 or ETH
     underlyingRedeemed: BigDecimal!     # Total amount the user has redeemed of the underlying ERC20 or ETH
     underlyingBalance: BigDecimal!      # Principal plus inflation earned: (cTokenBalance * exchangeRate)
-    interestEarned: BigDecimal!         # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
+    interestEarned: BigDecimal!         # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed) - NOTE - can be slightly negative or positive, due to precision loss in Compound sart contracts. This is okay.
 
     totalBorrowed: BigDecimal!          # total borrow, exclusive of interest
     totalRepaid: BigDecimal!            # total repaid

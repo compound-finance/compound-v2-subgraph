@@ -56,7 +56,7 @@ export function calculateLiquidty(userAddr: string): void {
 
   let dai = CTokenStats.load('cDAI-'.concat(userAddr))
   if (dai != null) {
-    let daiMarket = Market.load("0xb5e5d0f8c0cba267cd3d7035d6adc8eba7df7cdd") //9941
+    let daiMarket = Market.load("0x2acc448d73e8d53076731fea2ef3fc38214d0a7d") //9941
     let daiEthRatio = daiMarket.tokenPerEthRatio
     let daiBorrowInEth = dai.borrowBalance.times(daiEthRatio)
     let daiSupplyInEth = dai.underlyingBalance.times(daiEthRatio)
@@ -67,7 +67,7 @@ export function calculateLiquidty(userAddr: string): void {
 
   let rep = CTokenStats.load('cREP-'.concat(userAddr))
   if (rep != null) {
-    let repMarket = Market.load("0x0a1e4d0b5c71b955c0a5993023fc48ba6e380496") //9941
+    let repMarket = Market.load("0x1c8f7aca3564c02d1bf58eba8571b6fdafe91f44") //9941
     let repEthRatio = repMarket.tokenPerEthRatio
     let repBorrowInEth = rep.borrowBalance.times(repEthRatio)
     let repSupplyInEth = rep.underlyingBalance.times(repEthRatio)
@@ -78,7 +78,7 @@ export function calculateLiquidty(userAddr: string): void {
 
   let zrx = CTokenStats.load('cZRX-'.concat(userAddr))
   if (zrx != null) {
-    let zrxMarket = Market.load("0x19787bcf63e228a6669d905e90af397dca313cfc") //9941
+    let zrxMarket = Market.load("0x961aa80b6b44d445387aa8395c4c6c1a473f4ffd") //9941
     let zrxEthRatio = zrxMarket.tokenPerEthRatio
     let zrxBorrowInEth = zrx.borrowBalance.times(zrxEthRatio)
     let zrxSupplyInEth = zrx.underlyingBalance.times(zrxEthRatio)
@@ -88,7 +88,7 @@ export function calculateLiquidty(userAddr: string): void {
   }
   let eth = CTokenStats.load('cETH-'.concat(userAddr))
   if (eth != null) {
-    let ethMarket = Market.load("0x8a9447df1fb47209d36204e6d56767a33bf20f9f") //9941
+    let ethMarket = Market.load("0xbed6d9490a7cd81ff0f06f29189160a9641a358f") //9941
     let ethEthRatio = ethMarket.tokenPerEthRatio
     let ethBorrowInEth = eth.borrowBalance.times(ethEthRatio)
     let ethSupplyInEth = eth.underlyingBalance.times(ethEthRatio)
@@ -98,7 +98,7 @@ export function calculateLiquidty(userAddr: string): void {
   }
   let bat = CTokenStats.load('cBAT-'.concat(userAddr))
   if (bat != null) {
-    let batMarket = Market.load("0x9636246bf34e688c6652af544418b38eb51d2c43") //9941
+    let batMarket = Market.load("0x1cae2a350af04cd2525aee6cc8397e03f50c1af4") //9941
     let batEthRatio = batMarket.tokenPerEthRatio
     let batBorrowInEth = bat.borrowBalance.times(batEthRatio)
     let batSupplyInEth = bat.underlyingBalance.times(batEthRatio)
@@ -113,9 +113,10 @@ export function calculateLiquidty(userAddr: string): void {
   // If a user has borrowed, but has fully repaid, it will be 0, so we just reset to null and
   if (totalBorrowInEth == BigDecimal.fromString("0")) {
     user.accountLiquidity = null
+    user.availableToBorrowEth = null
   } else {
     user.accountLiquidity = truncateBigDecimal(totalSupplyInEth.div(totalBorrowInEth), 18)
+    user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18)
   }
-  user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18)
   user.save()
 }

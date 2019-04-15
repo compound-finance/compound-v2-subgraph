@@ -13,7 +13,7 @@ import {
 import {
   Market,
   User,
-  CTokenStats,
+  CTokenInfo,
 } from '../types/schema'
 
 import {truncateBigDecimal, getTokenEthRatio, calculateLiquidty} from "./helpers";
@@ -87,9 +87,9 @@ export function handleMint(event: Mint): void {
   }
 
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
-  let cTokenStats = CTokenStats.load(cTokenStatsID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
   if (cTokenStats == null) {
-    cTokenStats = new CTokenStats(cTokenStatsID)
+    cTokenStats = new CTokenInfo(cTokenStatsID)
     cTokenStats.user = event.params.minter
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
@@ -174,7 +174,7 @@ export function handleRedeem(event: Redeem): void {
 
   let userID = event.params.redeemer.toHex()
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
-  let cTokenStats = CTokenStats.load(cTokenStatsID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   /********** User Updates Below **********/ //
   let txHashes = cTokenStats.transactionHashes
@@ -248,11 +248,11 @@ export function handleBorrow(event: Borrow): void {
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
-  let cTokenStats = CTokenStats.load(cTokenStatsID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   // this is needed, since you could lend in one asset and borrow in another
   if (cTokenStats == null) {
-    cTokenStats = new CTokenStats(cTokenStatsID)
+    cTokenStats = new CTokenInfo(cTokenStatsID)
     cTokenStats.user = event.params.borrower
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
@@ -337,7 +337,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
-  let cTokenStats = CTokenStats.load(cTokenStatsID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
@@ -472,7 +472,7 @@ export function handleTransfer(event: Transfer): void {
 
   /********** User From Updates Below **********/
   let cTokenStatsFromID = market.symbol.concat('-').concat(event.params.from.toHex())
-  let cTokenStatsFrom = CTokenStats.load(cTokenStatsFromID)
+  let cTokenStatsFrom = CTokenInfo.load(cTokenStatsFromID)
 
   let txHashesFrom = cTokenStatsFrom.transactionHashes
   txHashesFrom.push(event.transaction.hash)
@@ -508,9 +508,9 @@ export function handleTransfer(event: Transfer): void {
   }
 
   let cTokenStatsToID = market.symbol.concat('-').concat(userToID)
-  let cTokenStatsTo = CTokenStats.load(cTokenStatsToID)
+  let cTokenStatsTo = CTokenInfo.load(cTokenStatsToID)
   if (cTokenStatsTo == null) {
-    cTokenStatsTo = new CTokenStats(cTokenStatsToID)
+    cTokenStatsTo = new CTokenInfo(cTokenStatsToID)
     cTokenStatsTo.user = event.params.to
     cTokenStatsTo.transactionHashes = []
     cTokenStatsTo.transactionTimes = []

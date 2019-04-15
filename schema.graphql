@@ -21,7 +21,7 @@
 # meet the 150%. So 150 ETH would mean if you borrowed 100 ETH, it would go to 0 for liquidity.
 type User @entity {
     id: ID!                                                 # user eth address
-    cTokens: [CTokenStats!]! @derivedFrom(field: "user")    # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
+    cTokens: [CTokenInfo!]! @derivedFrom(field: "user")    # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
     totalSupplyInEth: BigDecimal!                           # Add together all assets supplied
     totalBorrowInEth: BigDecimal!                           # Add together all assets borrowed from user
     accountLiquidity: BigDecimal                            # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. If null, it means the user currently has no borrows in the protocol
@@ -33,7 +33,7 @@ type User @entity {
 
 # CToken stats for a single users borrow and supply of an asset
 # It must be its own entity type, so that we have a one to many relationship under User.cTokens
-type CTokenStats @entity {
+type CTokenInfo @entity {
     id: ID!                             # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     user: Bytes!                        # user address for one-to-many relationships
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp

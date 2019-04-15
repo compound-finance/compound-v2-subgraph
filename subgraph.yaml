@@ -18,7 +18,7 @@ dataSources:
       entities:
         - User
         - Market
-        - UserAsset
+        - CTokenInfo
       abis:
         - name: CErc20
           file: ./abis/updatedCErc20.json
@@ -49,7 +49,7 @@ dataSources:
       entities:
         - User
         - Market
-        - UserAsset
+        - CTokenInfo
       abis:
         - name: CErc20
           file: ./abis/updatedCErc20.json
@@ -80,7 +80,7 @@ dataSources:
       entities:
         - User
         - Market
-        - UserAsset
+        - CTokenInfo
       abis:
         - name: CEther
           file: ./abis/updatedCEther.json
@@ -111,7 +111,7 @@ dataSources:
       entities:
         - User
         - Market
-        - UserAsset
+        - CTokenInfo
       abis:
         - name: CErc20
           file: ./abis/updatedCErc20.json
@@ -142,7 +142,7 @@ dataSources:
       entities:
         - User
         - Market
-        - UserAsset
+        - CTokenInfo
       abis:
         - name: CErc20
           file: ./abis/updatedCErc20.json

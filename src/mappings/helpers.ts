@@ -1,6 +1,6 @@
 // For each division by 10, add one to exponent to truncate one significant figure
 import {BigDecimal, BigInt} from "@graphprotocol/graph-ts/index";
-import {CTokenStats, Market, User} from "../types/schema";
+import {CTokenInfo, Market, User} from "../types/schema";
 
 // Must keep all values left of the decimal, and then allow user to decide how many decimals they want
 export function truncateBigDecimal(bd: BigDecimal, decimalLength: i32): BigDecimal {
@@ -54,7 +54,7 @@ export function calculateLiquidty(userAddr: string): void {
   let totalSupplyInEth = BigDecimal.fromString("0")
   let totalBorrowInEth = BigDecimal.fromString("0")
 
-  let dai = CTokenStats.load('cDAI-'.concat(userAddr))
+  let dai = CTokenInfo.load('cDAI-'.concat(userAddr))
   if (dai != null) {
     let daiMarket = Market.load("0x2acc448d73e8d53076731fea2ef3fc38214d0a7d") //9941
     let daiEthRatio = daiMarket.tokenPerEthRatio
@@ -65,7 +65,7 @@ export function calculateLiquidty(userAddr: string): void {
     totalSupplyInEth = totalSupplyInEth.plus(daiSupplyInEth)
   }
 
-  let rep = CTokenStats.load('cREP-'.concat(userAddr))
+  let rep = CTokenInfo.load('cREP-'.concat(userAddr))
   if (rep != null) {
     let repMarket = Market.load("0x1c8f7aca3564c02d1bf58eba8571b6fdafe91f44") //9941
     let repEthRatio = repMarket.tokenPerEthRatio
@@ -76,7 +76,7 @@ export function calculateLiquidty(userAddr: string): void {
     totalSupplyInEth = totalSupplyInEth.plus(repSupplyInEth)
   }
 
-  let zrx = CTokenStats.load('cZRX-'.concat(userAddr))
+  let zrx = CTokenInfo.load('cZRX-'.concat(userAddr))
   if (zrx != null) {
     let zrxMarket = Market.load("0x961aa80b6b44d445387aa8395c4c6c1a473f4ffd") //9941
     let zrxEthRatio = zrxMarket.tokenPerEthRatio
@@ -86,7 +86,7 @@ export function calculateLiquidty(userAddr: string): void {
     totalBorrowInEth = totalBorrowInEth.plus(zrxBorrowInEth)
     totalSupplyInEth = totalSupplyInEth.plus(zrxSupplyInEth)
   }
-  let eth = CTokenStats.load('cETH-'.concat(userAddr))
+  let eth = CTokenInfo.load('cETH-'.concat(userAddr))
   if (eth != null) {
     let ethMarket = Market.load("0xbed6d9490a7cd81ff0f06f29189160a9641a358f") //9941
     let ethEthRatio = ethMarket.tokenPerEthRatio
@@ -96,7 +96,7 @@ export function calculateLiquidty(userAddr: string): void {
     totalBorrowInEth = totalBorrowInEth.plus(ethBorrowInEth)
     totalSupplyInEth = totalSupplyInEth.plus(ethSupplyInEth)
   }
-  let bat = CTokenStats.load('cBAT-'.concat(userAddr))
+  let bat = CTokenInfo.load('cBAT-'.concat(userAddr))
   if (bat != null) {
     let batMarket = Market.load("0x1cae2a350af04cd2525aee6cc8397e03f50c1af4") //9941
     let batEthRatio = batMarket.tokenPerEthRatio

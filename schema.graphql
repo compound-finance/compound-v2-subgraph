@@ -1,34 +1,34 @@
  type Market @entity {
-    id: ID!                             # asset address (i.e. actual token address)
-    symbol: String!                     # i.e. cDAI, cBAT, etc.
-    accrualBlockNumber: BigInt!         # block number the market is updated to, which is the last block a trade on this market occurred
-    tokenPerEthRatio: BigDecimal!       # How many tokens equal 1 ETH. 0.007 would mean 142.86 DAI = 1 ETH
-    tokenPerUSDRatio: BigDecimal!       # How many tokens equal 1 USD. 19 would mean 1 REP = 19 USD. Note - based on DAI Price oracle
+    id: ID!                                 # Ctoken Address
+    symbol: String!                         # cDAI, cBAT, etc.
+    accrualBlockNumber: BigInt!             # Block number the market is updated to
+    tokenPerEthRatio: BigDecimal!           # How many tokens equal 1 ETH. 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
+    tokenPerUSDRatio: BigDecimal!           # How many tokens equal 1 USD. 19 would mean 1 REP = 19 USD. Currently based on DAI Price oracle
 
-    totalSupply: BigDecimal!                # CToken total supply. CTokens have 10 decimal points. Must div by 10^10
-    exchangeRate:  BigDecimal!               # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply. i.e. erc20/ctokens. Must div by 10^26
-    totalReserves: BigDecimal!              # Reserves accrue from a small % of all interest being shaved off for the protocol. Must div by 10^18
-    totalDeposits: BigDecimal               # The total lending of erc20 or eth given to this contract. Must div by 10^18 TODO - make non-null when CEth balance is queryable
-    perBlockSupplyInterest: BigDecimal! # Derived from borrowInterest : PRSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate).  Supply APR = PRSI * 2102400
+    totalSupply: BigDecimal!                # CToken total supply. CTokens have 8 decimal points
+    exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply. i.e. erc20 / CTokens
+    totalReserves: BigDecimal!              # Reserves accrue by shaving off a small percentage of all borrow interest
+    totalDeposits: BigDecimal               # The total lending of erc20 or eth given to this contract. TODO - make non-null when CEth balance is queryable
+    perBlockSupplyInterest: BigDecimal!     # PBSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate). Supply APR = PRSI * 2102400. Derived from borrow interest
 
-    totalCash: BigDecimal                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol.  Must div by 10^18 TODO - make non-null when CEth balance is queryable
-    totalBorrows: BigDecimal!               # Total borrows for the market.  Must div by 10^18
-    perBlockBorrowInterest: BigDecimal! # To get Annual Percent Return : perBlockBorrowInterest * 2102400
+    totalCash: BigDecimal                   # The true balance of the contracts ERC20 or Ether. Read from the actual ERC20 contract, or the ETH balance of the contract. NOT stored in CErc20.sol. TODO - make non-null when CEth balance is queryable
+    totalBorrows: BigDecimal!               # Total borrows for the market
+    perBlockBorrowInterest: BigDecimal!     # To get Annual Percent Return (APR) : perBlockBorrowInterest * 2102400
     borrowIndex: BigDecimal!                # The history of the markets borrow index return since inception. (Think S&P 500)
 }
 
 # Note - account liqidity is how much ETH is available to be collaterailzed, but keep in mind it still needs to
 # meet the 150%. So 150 ETH would mean if you borrowed 100 ETH, it would go to 0 for liquidity.
 type User @entity {
-    id: ID!                                             # user eth address
-    cTokens: [CTokenStats!]! @derivedFrom(field: "user")   # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
-    accountLiquidity: BigDecimal                        # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. 19.47 would imply you have 1947% more supply than borrow is null if a user has never borrowed. Many users don't borrow, and just lend, and this prevents divide by 0
-    totalSupplyInEth: BigDecimal!                             # Add together all assets supplied
-    totalBorrowInEth: BigDecimal!                             # Add together all assets borrowed from user
-    availableToBorrowEth: BigDecimal                         # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed TODO - ensure 1.5 collateral is read from Comptroller on mainnet (can change w/ gov)
-    countLiquidated: Int!                               # the amount of times this account has been liquidated
-    countLiquidator: Int!                               # the amount of times this account has liquidated others
-    hasBorrowed: Boolean!                               # If the user EVER borrows, make true. A small subset of users borrow. This makes liquidity calculations optimized
+    id: ID!                                                 # user eth address
+    cTokens: [CTokenStats!]! @derivedFrom(field: "user")    # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
+    totalSupplyInEth: BigDecimal!                           # Add together all assets supplied
+    totalBorrowInEth: BigDecimal!                           # Add together all assets borrowed from user
+    accountLiquidity: BigDecimal                            # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. If null, it means the user currently has no borrows in the protocol
+    availableToBorrowEth: BigDecimal                        # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null, it means the user currently has no borrows in the protocol TODO - ensure 1.5 collateral is read from Comptroller on mainnet (can change w/ gov)
+    countLiquidated: Int!                                   # the amount of times this account has been liquidated
+    countLiquidator: Int!                                   # the amount of times this account has liquidated others
+    hasBorrowed: Boolean!                                   # If the user EVER borrows, make true. A small subset of users borrow. This makes liquidity calculations optimized
 }
 
 # CToken stats for a single users borrow and supply of an asset
@@ -40,14 +40,14 @@ type CTokenStats @entity {
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
     accrualBlockNumber: BigInt!         # block number the user balances are updated to
 
-    cTokenBalance: BigDecimal!              # total ctokens the user owns of this asset
-    underlyingSupplied: BigDecimal!         # Total amount the user has supplied of the underlying ERC20 or ETH
-    underlyingRedeemed: BigDecimal!         # Total amount the user has redeemed of the underlying ERC20 or ETH
-    underlyingBalance: BigDecimal!          # Principal plus inflation earned: (cTokenBalance * exchangeRate)
-    interestEarned: BigDecimal!             # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
+    cTokenBalance: BigDecimal!          # total ctokens the user owns of this asset
+    underlyingSupplied: BigDecimal!     # Total amount the user has supplied of the underlying ERC20 or ETH
+    underlyingRedeemed: BigDecimal!     # Total amount the user has redeemed of the underlying ERC20 or ETH
+    underlyingBalance: BigDecimal!      # Principal plus inflation earned: (cTokenBalance * exchangeRate)
+    interestEarned: BigDecimal!         # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)
 
-    totalBorrowed: BigDecimal!              # total borrow, exclusive of interest
-    totalRepaid: BigDecimal!                # total repaid
-    borrowBalance: BigDecimal!              # total borrow, inclusive of interest, that must be repaid
-    borrowInterest: BigDecimal!             # borrowInterest = borrowBalance - totalBorrowed + totalRepaid
+    totalBorrowed: BigDecimal!          # total borrow, exclusive of interest
+    totalRepaid: BigDecimal!            # total repaid
+    borrowBalance: BigDecimal!          # total borrow, inclusive of interest, that must be repaid
+    borrowInterest: BigDecimal!         # borrowInterest = borrowBalance - totalBorrowed + totalRepaid
 }

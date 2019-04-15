@@ -36,7 +36,7 @@ export function handleMint(event: Mint): void {
     market.tokenPerEthRatio = BigDecimal.fromString("1")
     let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
     if (noTruncRatio.toString().length > 90){
-      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 90)
+      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
     } else {
       market.tokenPerUSDRatio = noTruncRatio
     }  }
@@ -62,7 +62,7 @@ export function handleMint(event: Mint): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -164,7 +164,7 @@ export function handleRedeem(event: Redeem): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -240,7 +240,7 @@ export function handleBorrow(event: Borrow): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -329,7 +329,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -404,7 +404,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -467,7 +467,7 @@ export function handleTransfer(event: Transfer): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
   market.save()
 
   /********** User From Updates Below **********/

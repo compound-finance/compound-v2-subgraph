@@ -34,11 +34,11 @@ export function handleMint(event: Mint): void {
     market.symbol = contract.symbol()
     market.tokenPerEthRatio = getTokenEthRatio(market.symbol)
     let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-    if (noTruncRatio.toString().length > 90){
-      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 90)
-    } else {
-      market.tokenPerUSDRatio = noTruncRatio
-    }
+    // if (noTruncRatio.toString().length > 90){
+      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+    // } else {
+    //   market.tokenPerUSDRatio = noTruncRatio
+    // }
   }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
@@ -62,7 +62,7 @@ export function handleMint(event: Mint): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -164,7 +164,7 @@ export function handleRedeem(event: Redeem): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -239,7 +239,7 @@ export function handleBorrow(event: Borrow): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -328,7 +328,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -359,9 +359,6 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.save()
 
   /********** Liquidity Calculations Below **********/
-  // calculateLiquidty(userID)
-    // TODO - not sure why the above doesnt work, TO INVESTIGATE. we are failing with a divide by 0 . might be okay. need to think through situation
-    // todo - well it is still failing here. it might be that an account can go back down to 0, and then it "exists". so rework the equation so no divide by zero. i believe this is possible
   let user = User.load(userID)
   if (user.hasBorrowed == true){
     calculateLiquidty(userID)
@@ -408,7 +405,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -473,7 +470,7 @@ export function handleTransfer(event: Transfer): void {
     .div(market.totalSupply.times(market.exchangeRate))
 
   // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 90)
+  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
 
   market.save()
 

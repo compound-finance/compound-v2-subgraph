@@ -2,25 +2,19 @@
 import {BigDecimal, BigInt} from "@graphprotocol/graph-ts/index";
 import {CTokenStats, Market, User} from "../types/schema";
 
-// TODO - repurpose this so that you pass in the amount of decimals you WANT, not the amount to truncate. We will do 18 for all, except cToken, which will be 8
 // Must keep all values left of the decimal, and then allow user to decide how many decimals they want
 export function truncateBigDecimal(bd: BigDecimal, decimalLength: i32): BigDecimal {
+
   // Figuring out how many digits to truncate
-  let largerThanZeroLength = bd.digits.toString().length + bd.exp.toI32() // exp is negative if there are decimals
+  // exp is negative if there are decimals, so we add it, unintuitively
+  let largerThanZeroLength = bd.digits.toString().length + bd.exp.toI32()
 
-  // number is less than 0, we want it to be represented by 0, not by a negative number
-  // if (largerThanZeroLength < 0){
-  //   largerThanZeroLength = 0
-  // }
-
-  // if larger than zero length is negative, then digit length will be less than 18, which is okay
+  // if largerThanZeroLength is negative, then digit length will be less than 18, which is okay
   let newDigitLength = decimalLength + largerThanZeroLength
   let lengthToTruncate = bd.digits.toString().length - newDigitLength
 
   // This means it was originally smaller than desired decimalLength, so do nothing
   if (lengthToTruncate < 0) {
-    // bd.digits = BigInt.fromI32(bd.digits.toString().length + 687)
-    // bd.exp = BigInt
     return bd
   } else {
     // This will shave off the length of the full digits to what is desired
@@ -120,8 +114,8 @@ export function calculateLiquidty(userAddr: string): void {
   if (totalBorrowInEth == BigDecimal.fromString("0")) {
     user.accountLiquidity = null
   } else {
-    user.accountLiquidity = truncateBigDecimal(totalSupplyInEth.div(totalBorrowInEth), 18) // TODO - TRUNCATE
+    user.accountLiquidity = truncateBigDecimal(totalSupplyInEth.div(totalBorrowInEth), 18)
   }
-  user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18) // TODO - TRUNCATE
+  user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18)
   user.save()
 }

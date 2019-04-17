@@ -49,6 +49,7 @@ Below are a few ways to show how to query the Compound V2 Subgraph for data. The
 ```
 
 ### Querying All Users, and all their CToken balances
+Commented out values are temporarily not being used. 
 ```graphql
 {
   users{
@@ -57,8 +58,8 @@ Below are a few ways to show how to query the Compound V2 Subgraph for data. The
     countLiquidator
     accountLiquidity
     availableToBorrowEth
-    totalSupplyInEth
-    totalBorrowInEth
+#    totalSupplyInEth
+#    totalBorrowInEth
     cTokens{
       id
       user
@@ -68,12 +69,12 @@ Below are a few ways to show how to query the Compound V2 Subgraph for data. The
       cTokenBalance
       underlyingSupplied
       underlyingRedeemed
-      underlyingBalance
-      interestEarned
+#      underlyingBalance
+#      interestEarned
       totalBorrowed
       totalRepaid
-      borrowBalance
-      borrowInterest
+#      borrowBalance
+#      borrowInterest
     }
   }
 }

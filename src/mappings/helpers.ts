@@ -51,72 +51,72 @@ export function getTokenEthRatio(symbol: string): BigDecimal {
 
 
 export function calculateLiquidty(userAddr: string): void {
-  let totalSupplyInEth = BigDecimal.fromString("0")
-  let totalBorrowInEth = BigDecimal.fromString("0")
-
-  let dai = CTokenInfo.load('cDAI-'.concat(userAddr))
-  if (dai != null) {
-    let daiMarket = Market.load("0x2acc448d73e8d53076731fea2ef3fc38214d0a7d") //9941
-    let daiEthRatio = daiMarket.tokenPerEthRatio
-    let daiBorrowInEth = dai.borrowBalance.times(daiEthRatio)
-    let daiSupplyInEth = dai.underlyingBalance.times(daiEthRatio)
-
-    totalBorrowInEth = totalBorrowInEth.plus(daiBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(daiSupplyInEth)
-  }
-
-  let rep = CTokenInfo.load('cREP-'.concat(userAddr))
-  if (rep != null) {
-    let repMarket = Market.load("0x1c8f7aca3564c02d1bf58eba8571b6fdafe91f44") //9941
-    let repEthRatio = repMarket.tokenPerEthRatio
-    let repBorrowInEth = rep.borrowBalance.times(repEthRatio)
-    let repSupplyInEth = rep.underlyingBalance.times(repEthRatio)
-
-    totalBorrowInEth = totalBorrowInEth.plus(repBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(repSupplyInEth)
-  }
-
-  let zrx = CTokenInfo.load('cZRX-'.concat(userAddr))
-  if (zrx != null) {
-    let zrxMarket = Market.load("0x961aa80b6b44d445387aa8395c4c6c1a473f4ffd") //9941
-    let zrxEthRatio = zrxMarket.tokenPerEthRatio
-    let zrxBorrowInEth = zrx.borrowBalance.times(zrxEthRatio)
-    let zrxSupplyInEth = zrx.underlyingBalance.times(zrxEthRatio)
-
-    totalBorrowInEth = totalBorrowInEth.plus(zrxBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(zrxSupplyInEth)
-  }
-  let eth = CTokenInfo.load('cETH-'.concat(userAddr))
-  if (eth != null) {
-    let ethMarket = Market.load("0xbed6d9490a7cd81ff0f06f29189160a9641a358f") //9941
-    let ethEthRatio = ethMarket.tokenPerEthRatio
-    let ethBorrowInEth = eth.borrowBalance.times(ethEthRatio)
-    let ethSupplyInEth = eth.underlyingBalance.times(ethEthRatio)
-
-    totalBorrowInEth = totalBorrowInEth.plus(ethBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(ethSupplyInEth)
-  }
-  let bat = CTokenInfo.load('cBAT-'.concat(userAddr))
-  if (bat != null) {
-    let batMarket = Market.load("0x1cae2a350af04cd2525aee6cc8397e03f50c1af4") //9941
-    let batEthRatio = batMarket.tokenPerEthRatio
-    let batBorrowInEth = bat.borrowBalance.times(batEthRatio)
-    let batSupplyInEth = bat.underlyingBalance.times(batEthRatio)
-
-    totalBorrowInEth = totalBorrowInEth.plus(batBorrowInEth)
-    totalSupplyInEth = totalSupplyInEth.plus(batSupplyInEth)
-  }
-
-  let user = User.load(userAddr)
-  user.totalBorrowInEth = totalBorrowInEth
-  user.totalSupplyInEth = totalSupplyInEth
-  // If a user has borrowed, but has fully repaid, it will be 0, so we just reset to null and
-  if (totalBorrowInEth == BigDecimal.fromString("0")) {
-    user.accountLiquidity = null
-    user.availableToBorrowEth = null
-  } else {
-    user.accountLiquidity = truncateBigDecimal(totalSupplyInEth.div(totalBorrowInEth), 18)
-    user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18)
-  }
-  user.save()
+  // let totalSupplyInEth = BigDecimal.fromString("0")
+  // let totalBorrowInEth = BigDecimal.fromString("0")
+  //
+  // let dai = CTokenInfo.load('cDAI-'.concat(userAddr))
+  // if (dai != null) {
+  //   let daiMarket = Market.load("0x2acc448d73e8d53076731fea2ef3fc38214d0a7d") //9941
+  //   let daiEthRatio = daiMarket.tokenPerEthRatio
+  //   let daiBorrowInEth = dai.borrowBalance.times(daiEthRatio)
+  //   let daiSupplyInEth = dai.underlyingBalance.times(daiEthRatio)
+  //
+  //   totalBorrowInEth = totalBorrowInEth.plus(daiBorrowInEth)
+  //   totalSupplyInEth = totalSupplyInEth.plus(daiSupplyInEth)
+  // }
+  //
+  // let rep = CTokenInfo.load('cREP-'.concat(userAddr))
+  // if (rep != null) {
+  //   let repMarket = Market.load("0x1c8f7aca3564c02d1bf58eba8571b6fdafe91f44") //9941
+  //   let repEthRatio = repMarket.tokenPerEthRatio
+  //   let repBorrowInEth = rep.borrowBalance.times(repEthRatio)
+  //   let repSupplyInEth = rep.underlyingBalance.times(repEthRatio)
+  //
+  //   totalBorrowInEth = totalBorrowInEth.plus(repBorrowInEth)
+  //   totalSupplyInEth = totalSupplyInEth.plus(repSupplyInEth)
+  // }
+  //
+  // let zrx = CTokenInfo.load('cZRX-'.concat(userAddr))
+  // if (zrx != null) {
+  //   let zrxMarket = Market.load("0x961aa80b6b44d445387aa8395c4c6c1a473f4ffd") //9941
+  //   let zrxEthRatio = zrxMarket.tokenPerEthRatio
+  //   let zrxBorrowInEth = zrx.borrowBalance.times(zrxEthRatio)
+  //   let zrxSupplyInEth = zrx.underlyingBalance.times(zrxEthRatio)
+  //
+  //   totalBorrowInEth = totalBorrowInEth.plus(zrxBorrowInEth)
+  //   totalSupplyInEth = totalSupplyInEth.plus(zrxSupplyInEth)
+  // }
+  // let eth = CTokenInfo.load('cETH-'.concat(userAddr))
+  // if (eth != null) {
+  //   let ethMarket = Market.load("0xbed6d9490a7cd81ff0f06f29189160a9641a358f") //9941
+  //   let ethEthRatio = ethMarket.tokenPerEthRatio
+  //   let ethBorrowInEth = eth.borrowBalance.times(ethEthRatio)
+  //   let ethSupplyInEth = eth.underlyingBalance.times(ethEthRatio)
+  //
+  //   totalBorrowInEth = totalBorrowInEth.plus(ethBorrowInEth)
+  //   totalSupplyInEth = totalSupplyInEth.plus(ethSupplyInEth)
+  // }
+  // let bat = CTokenInfo.load('cBAT-'.concat(userAddr))
+  // if (bat != null) {
+  //   let batMarket = Market.load("0x1cae2a350af04cd2525aee6cc8397e03f50c1af4") //9941
+  //   let batEthRatio = batMarket.tokenPerEthRatio
+  //   let batBorrowInEth = bat.borrowBalance.times(batEthRatio)
+  //   let batSupplyInEth = bat.underlyingBalance.times(batEthRatio)
+  //
+  //   totalBorrowInEth = totalBorrowInEth.plus(batBorrowInEth)
+  //   totalSupplyInEth = totalSupplyInEth.plus(batSupplyInEth)
+  // }
+  //
+  // let user = User.load(userAddr)
+  // user.totalBorrowInEth = totalBorrowInEth
+  // user.totalSupplyInEth = totalSupplyInEth
+  // // If a user has borrowed, but has fully repaid, it will be 0, so we just reset to null and
+  // if (totalBorrowInEth == BigDecimal.fromString("0")) {
+  //   user.accountLiquidity = null
+  //   user.availableToBorrowEth = null
+  // } else {
+  //   user.accountLiquidity = truncateBigDecimal(totalSupplyInEth.div(totalBorrowInEth), 18)
+  //   user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18)
+  // }
+  // user.save()
 }

@@ -24,8 +24,8 @@ type User @entity {
     cTokens: [CTokenInfo!]! @derivedFrom(field: "user")    # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
     totalSupplyInEth: BigDecimal!                           # Add together all assets supplied
     totalBorrowInEth: BigDecimal!                           # Add together all assets borrowed from user
-    accountLiquidity: BigDecimal                            # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. If null, it means the user currently has no borrows in the protocol
-    availableToBorrowEth: BigDecimal                        # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null, it means the user currently has no borrows in the protocol. NOTE - collateral will not always be 1.5, this needs to be checked out when Comptroller is released
+#    accountLiquidity: BigDecimal                            # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. If null, it means the user currently has no borrows in the protocol TODO - delay implementing until query time calculations
+#    availableToBorrowEth: BigDecimal                        # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null, it means the user currently has no borrows in the protocol. NOTE - collateral will not always be 1.5, this needs to be checked out when Comptroller is released TODO - delay implementing until query time calculations
     countLiquidated: Int!                                   # the amount of times this account has been liquidated
     countLiquidator: Int!                                   # the amount of times this account has liquidated others
     hasBorrowed: Boolean!                                   # If the user EVER borrows, make true. A small subset of users borrow. This makes liquidity calculations optimized
@@ -43,11 +43,11 @@ type CTokenInfo @entity {
     cTokenBalance: BigDecimal!          # total ctokens the user owns of this asset
     underlyingSupplied: BigDecimal!     # Total amount the user has supplied of the underlying ERC20 or ETH
     underlyingRedeemed: BigDecimal!     # Total amount the user has redeemed of the underlying ERC20 or ETH
-    underlyingBalance: BigDecimal!      # Principal plus inflation earned: (cTokenBalance * exchangeRate)
-    interestEarned: BigDecimal!         # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed) - NOTE - can be slightly negative or positive, due to precision loss in Compound sart contracts. This is okay.
+#    underlyingBalance: BigDecimal!      # Principal plus inflation earned: (cTokenBalance * exchangeRate) TODO - delay implementing until query time calculations
+#    interestEarned: BigDecimal!         # interestEarned = underlyingBalance - sum(underlyingSupplied) + sum(underlyingRedeemed)  TODO - delay implementing until query time calculations
 
     totalBorrowed: BigDecimal!          # total borrow, exclusive of interest
     totalRepaid: BigDecimal!            # total repaid
-    borrowBalance: BigDecimal!          # total borrow, inclusive of interest, that must be repaid
-    borrowInterest: BigDecimal!         # borrowInterest = borrowBalance - totalBorrowed + totalRepaid
+#    borrowBalance: BigDecimal!          # total borrow, inclusive of interest, that must be repaid  TODO - delay implementing until query time calculations
+#    borrowInterest: BigDecimal!         # borrowInterest = borrowBalance - totalBorrowed + totalRepaid  TODO - delay implementing until query time calculations
 }

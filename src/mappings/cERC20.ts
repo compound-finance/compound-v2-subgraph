@@ -51,15 +51,7 @@ export function handleMint(event: Mint): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -95,13 +87,13 @@ export function handleMint(event: Mint): void {
     cTokenStats.transactionTimes = []
     cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
     cTokenStats.underlyingRedeemed = BigDecimal.fromString("0")
-    cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
-    cTokenStats.interestEarned =  BigDecimal.fromString("0")
+    // cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
+    // cTokenStats.interestEarned =  BigDecimal.fromString("0")
     cTokenStats.cTokenBalance = BigDecimal.fromString("0")
     cTokenStats.totalBorrowed = BigDecimal.fromString("0")
     cTokenStats.totalRepaid =  BigDecimal.fromString("0")
-    cTokenStats.borrowBalance = BigDecimal.fromString("0")
-    cTokenStats.borrowInterest =  BigDecimal.fromString("0")
+    // cTokenStats.borrowBalance = BigDecimal.fromString("0")
+    // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
 
   let txHashes = cTokenStats.transactionHashes
@@ -114,10 +106,10 @@ export function handleMint(event: Mint): void {
 
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
-  let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
-  cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
+  // cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStats.underlyingSupplied = cTokenStats.underlyingSupplied.plus(event.params.mintAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
-  cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
+  // cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.minter).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
 
@@ -153,15 +145,7 @@ export function handleRedeem(event: Redeem): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -187,11 +171,11 @@ export function handleRedeem(event: Redeem): void {
 
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
-  let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
+  // let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
 
-  cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
-  cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
+  // cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.redeemer).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
 
@@ -227,15 +211,7 @@ export function handleBorrow(event: Borrow): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -258,13 +234,13 @@ export function handleBorrow(event: Borrow): void {
     cTokenStats.transactionTimes = []
     cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
     cTokenStats.underlyingRedeemed = BigDecimal.fromString("0")
-    cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
-    cTokenStats.interestEarned =  BigDecimal.fromString("0")
+    // cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
+    // cTokenStats.interestEarned =  BigDecimal.fromString("0")
     cTokenStats.cTokenBalance = BigDecimal.fromString("0")
     cTokenStats.totalBorrowed = BigDecimal.fromString("0")
     cTokenStats.totalRepaid =  BigDecimal.fromString("0")
-    cTokenStats.borrowBalance = BigDecimal.fromString("0")
-    cTokenStats.borrowInterest =  BigDecimal.fromString("0")
+    // cTokenStats.borrowBalance = BigDecimal.fromString("0")
+    // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
 
   let txHashes = cTokenStats.transactionHashes
@@ -275,10 +251,10 @@ export function handleBorrow(event: Borrow): void {
   cTokenStats.transactionTimes = txTimes
   cTokenStats.accrualBlockNumber = event.block.number
 
-  let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
+  // cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStats.totalBorrowed = cTokenStats.totalBorrowed.plus(event.params.borrowAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
-  cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
+  // cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
 
@@ -316,15 +292,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -347,10 +315,10 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.transactionTimes = txTimes
   cTokenStats.accrualBlockNumber = event.block.number
 
-  let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
+  // cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   cTokenStats.totalRepaid = cTokenStats.totalRepaid.plus(event.params.repayAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
-  cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
+  // cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.borrower).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
 
@@ -393,15 +361,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface
@@ -458,15 +418,7 @@ export function handleTransfer(event: Transfer): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   market.save()
 
@@ -485,11 +437,11 @@ export function handleTransfer(event: Transfer): void {
 
   let accountSnapshotFrom = contract.getAccountSnapshot(event.params.from)
   cTokenStatsFrom.cTokenBalance = accountSnapshotFrom.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
-  cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
+  // cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
-  let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
-  cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
+  // let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
+  // cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
   cTokenStatsFrom.save()
 
   /********** User To Updates Below **********/
@@ -516,13 +468,13 @@ export function handleTransfer(event: Transfer): void {
     cTokenStatsTo.transactionTimes = []
     cTokenStatsTo.underlyingSupplied = BigDecimal.fromString("0")
     cTokenStatsTo.underlyingRedeemed = BigDecimal.fromString("0")
-    cTokenStatsTo.underlyingBalance =  BigDecimal.fromString("0")
-    cTokenStatsTo.interestEarned =  BigDecimal.fromString("0")
+    // cTokenStatsTo.underlyingBalance =  BigDecimal.fromString("0")
+    // cTokenStatsTo.interestEarned =  BigDecimal.fromString("0")
     cTokenStatsTo.cTokenBalance = BigDecimal.fromString("0")
     cTokenStatsTo.totalBorrowed = BigDecimal.fromString("0")
     cTokenStatsTo.totalRepaid =  BigDecimal.fromString("0")
-    cTokenStatsTo.borrowBalance = BigDecimal.fromString("0")
-    cTokenStatsTo.borrowInterest =  BigDecimal.fromString("0")
+    // cTokenStatsTo.borrowBalance = BigDecimal.fromString("0")
+    // cTokenStatsTo.borrowInterest =  BigDecimal.fromString("0")
   }
 
   let txHashesTo = cTokenStatsTo.transactionHashes
@@ -535,11 +487,11 @@ export function handleTransfer(event: Transfer): void {
 
   let accountSnapshotTo = contract.getAccountSnapshot(event.params.to)
   cTokenStatsTo.cTokenBalance = accountSnapshotTo.value1.toBigDecimal().div(BigDecimal.fromString("100000000"))
-  cTokenStatsTo.borrowBalance = accountSnapshotTo.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
+  // cTokenStatsTo.borrowBalance = accountSnapshotTo.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
-  let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
-  cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
+  // let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
+  // cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
   cTokenStatsTo.save()
 
   /********** Liquidation Updates Below **********/
@@ -579,15 +531,7 @@ export function handleAccrueInterest(event: AccrueInterest): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface

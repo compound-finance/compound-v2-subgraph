@@ -51,15 +51,7 @@ export function handleMint(event: Mint): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface

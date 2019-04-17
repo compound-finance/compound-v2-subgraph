@@ -51,15 +51,7 @@ export function handleMint(event: Mint): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
-  // perBlockSupplyInterest = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate) * 10^18
-  let pbsi = market.totalBorrows
-    .times(market.perBlockBorrowInterest)
-    .times(BigDecimal.fromString("1").minus(contract.reserveFactorMantissa().toBigDecimal()))
-    .div(market.totalSupply.times(market.exchangeRate))
-
-  // Then truncate it to be 18 decimal points
-  market.perBlockSupplyInterest = truncateBigDecimal(pbsi, 18)
+  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
 
   // Now we must get the true eth balance of the CEther.sol contract
   market.totalCash = contract.getCash().toBigDecimal()

@@ -2,9 +2,10 @@
 # yarn lockfile v1
 
 
-"@graphprotocol/graph-cli@git://github.com/graphprotocol/graph-cli":
-  version "0.7.3"
-  resolved "git://github.com/graphprotocol/graph-cli#322d8df570e2839259d89f9942d085bfa636eb4a"
+"@graphprotocol/graph-cli@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@graphprotocol/graph-cli/-/graph-cli-0.9.0.tgz#0d0c0b7f23d07708a9f0df816a086ae85ef54b56"
+  integrity sha512-sl+TfWVmKd0gw9aHWJMDa4bRh75eDm+PhsdolDGBAQKARjxsOE7na3pJFOnimyk+0K/7yob8YzGgwkbuSmY7Xg==
   dependencies:
     assemblyscript "https://github.com/AssemblyScript/assemblyscript#ced01216f88a3037d0657a45255dc6df646ff10c"
     chalk "^2.4.1"
@@ -24,9 +25,10 @@
     prettier "^1.13.5"
     request "^2.88.0"
 
-"@graphprotocol/graph-ts@git://github.com/graphprotocol/graph-ts":
-  version "0.5.1"
-  resolved "git://github.com/graphprotocol/graph-ts#42a1a2380063942801e5ac76430bfd95b97db11a"
+"@graphprotocol/graph-ts@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@graphprotocol/graph-ts/-/graph-ts-0.9.0.tgz#78a15adf114f9ad343848011823edb219afa5527"
+  integrity sha512-zlUDYiwRNxyS3Z6/XjS9shgyOYXcFcT6N80j03XFV+LqgCs/gwBwqrl1r91NI+O/YwzpdytHOUH8b3noe5bVcg==
   dependencies:
     assemblyscript "https://github.com/AssemblyScript/assemblyscript#ced01216f88a3037d0657a45255dc6df646ff10c"
 
@@ -172,9 +174,9 @@ asn1@~0.2.3:
   dependencies:
     safer-buffer "~2.1.0"
 
-"assemblyscript@https://github.com/AssemblyScript/assemblyscript#ced01216f88a3037d0657a45255dc6df646ff10c":
+"assemblyscript@git+https://github.com/AssemblyScript/assemblyscript.git#ced01216f88a3037d0657a45255dc6df646ff10c":
   version "0.5.0"
-  resolved "https://github.com/AssemblyScript/assemblyscript#ced01216f88a3037d0657a45255dc6df646ff10c"
+  resolved "git+https://github.com/AssemblyScript/assemblyscript.git#ced01216f88a3037d0657a45255dc6df646ff10c"
   dependencies:
     "@protobufjs/utf8" "^1.1.0"
     binaryen "55.0.0-nightly.20181130"

@@ -181,6 +181,16 @@ export function handleRedeem(event: Redeem): void {
 
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
+  if (user == null) {
+    user = new User(userID)
+    user.cTokens = []
+    user.countLiquidated = 0
+    user.countLiquidator = 0
+    user.totalBorrowInEth = BigDecimal.fromString("0")
+    user.totalSupplyInEth = BigDecimal.fromString("0")
+    user.hasBorrowed = false
+    user.save()
+  }
   if (user.hasBorrowed == true){
     calculateLiquidty(userID)
   }
@@ -260,6 +270,16 @@ export function handleBorrow(event: Borrow): void {
 
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
+  if (user == null) {
+    user = new User(userID)
+    user.cTokens = []
+    user.countLiquidated = 0
+    user.countLiquidator = 0
+    user.totalBorrowInEth = BigDecimal.fromString("0")
+    user.totalSupplyInEth = BigDecimal.fromString("0")
+    user.hasBorrowed = false
+    user.save()
+  }
   user.hasBorrowed = true
   user.save()
   calculateLiquidty(userID)
@@ -324,6 +344,16 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
+  if (user == null) {
+    user = new User(userID)
+    user.cTokens = []
+    user.countLiquidated = 0
+    user.countLiquidator = 0
+    user.totalBorrowInEth = BigDecimal.fromString("0")
+    user.totalSupplyInEth = BigDecimal.fromString("0")
+    user.hasBorrowed = false
+    user.save()
+  }
   if (user.hasBorrowed == true){
     calculateLiquidty(userID)
   }
@@ -388,6 +418,16 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 
   let borrowerID = event.params.borrower.toHex()
   let borrower = User.load(borrowerID)
+  if (borrower == null) {
+    borrower = new User(borrowerID)
+    borrower.cTokens = []
+    borrower.countLiquidated = 0
+    borrower.countLiquidator = 0
+    borrower.totalBorrowInEth = BigDecimal.fromString("0")
+    borrower.totalSupplyInEth = BigDecimal.fromString("0")
+    borrower.hasBorrowed = false
+    borrower.save()
+  }
   borrower.countLiquidated = borrower.countLiquidated + 1
   borrower.save()
 
@@ -497,6 +537,16 @@ export function handleTransfer(event: Transfer): void {
   /********** Liquidation Updates Below **********/
   let userFromID = event.params.from.toHex()
   let userFrom = User.load(userFromID)
+  if (userFrom == null) {
+    userFrom = new User(userFromID)
+    userFrom.cTokens = []
+    userFrom.countLiquidated = 0
+    userFrom.countLiquidator = 0
+    userFrom.totalBorrowInEth = BigDecimal.fromString("0")
+    userFrom.totalSupplyInEth = BigDecimal.fromString("0")
+    userFrom.hasBorrowed = false
+    userFrom.save()
+  }
   if (userFrom.hasBorrowed == true){
     calculateLiquidty(userFromID)
   }

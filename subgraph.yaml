@@ -43,7 +43,7 @@ dataSources:
       abi: CErc20
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.1
+      apiVersion: 0.0.2
       language: wasm/assemblyscript
       file: ./src/mappings/cERC20.ts
       entities:
@@ -74,7 +74,7 @@ dataSources:
       abi: CEther
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.1
+      apiVersion: 0.0.2
       language: wasm/assemblyscript
       file: ./src/mappings/cETH.ts
       entities:

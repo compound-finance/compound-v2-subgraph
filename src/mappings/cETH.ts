@@ -154,6 +154,22 @@ export function handleRedeem(event: Redeem): void {
   let cTokenStatsID = market.symbol.concat('-').concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
+  if (cTokenStats == null) {
+    cTokenStats = new CTokenInfo(cTokenStatsID)
+    cTokenStats.user = event.params.redeemer
+    cTokenStats.transactionHashes = []
+    cTokenStats.transactionTimes = []
+    cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
+    cTokenStats.underlyingRedeemed = BigDecimal.fromString("0")
+    // cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
+    // cTokenStats.interestEarned =  BigDecimal.fromString("0")
+    cTokenStats.cTokenBalance = BigDecimal.fromString("0")
+    cTokenStats.totalBorrowed = BigDecimal.fromString("0")
+    cTokenStats.totalRepaid =  BigDecimal.fromString("0")
+    // cTokenStats.borrowBalance = BigDecimal.fromString("0")
+    // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
+  }
+
   /********** User Updates Below **********/ //
   let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)

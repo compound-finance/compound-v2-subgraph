@@ -8,7 +8,7 @@ dataSources:
     name: cBAT
     network: rinkeby
     source:
-      address: "0x1cae2a350af04cd2525aee6cc8397e03f50c1af4"
+      address: "0x6d87b537e488023ff2159620085535c746DDc5A3"
       abi: CErc20
     mapping:
       kind: ethereum/events
@@ -39,7 +39,7 @@ dataSources:
     name: cDAI
     network: rinkeby
     source:
-      address: "0x2acc448d73e8d53076731fea2ef3fc38214d0a7d"
+      address: "0x5f7F41D62B001De66a195def4b27011D419AA70B"
       abi: CErc20
     mapping:
       kind: ethereum/events
@@ -70,7 +70,7 @@ dataSources:
     name: cETH
     network: rinkeby
     source:
-      address: "0xbed6d9490a7cd81ff0f06f29189160a9641a358f"
+      address: "0x74DA78D316bdD93595C67CC7B04a3B267C8Ccf4e"
       abi: CEther
     mapping:
       kind: ethereum/events
@@ -101,11 +101,11 @@ dataSources:
     name: cREP
     network: rinkeby
     source:
-      address: "0x1c8f7aca3564c02d1bf58eba8571b6fdafe91f44"
+      address: "0xbfE43eCbA0fBa0C202ceD5fB4cEa26fF5B6aEb40"
       abi: CErc20
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.1
+      apiVersion: 0.0.2
       language: wasm/assemblyscript
       file: ./src/mappings/cERC20.ts
       entities:
@@ -132,11 +132,11 @@ dataSources:
     name: cZRX
     network: rinkeby
     source:
-      address: "0x961aa80b6b44d445387aa8395c4c6c1a473f4ffd"
+      address: "0xaa0C9529542c1ADBDbbA5718d25ceBBedBfaa756"
       abi: CErc20
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.1
+      apiVersion: 0.0.2
       language: wasm/assemblyscript
       file: ./src/mappings/cERC20.ts
       entities:

@@ -56,8 +56,8 @@ Commented out values are temporarily not being used.
     id
     countLiquidated
     countLiquidator
-    accountLiquidity
-    availableToBorrowEth
+#    accountLiquidity
+#    availableToBorrowEth
 #    totalSupplyInEth
 #    totalBorrowInEth
     cTokens{

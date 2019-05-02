@@ -35,6 +35,7 @@ type User @entity {
 # It must be its own entity type, so that we have a one to many relationship under User.cTokens
 type CTokenInfo @entity {
     id: ID!                             # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
+    symbol: String!
     user: Bytes!                        # user address for one-to-many relationships
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp

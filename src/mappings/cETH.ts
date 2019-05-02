@@ -75,11 +75,12 @@ export function handleMint(event: Mint): void {
     user.save()
   }
 
-  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStatsID = market.id.concat('-').concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
   if (cTokenStats == null) {
     cTokenStats = new CTokenInfo(cTokenStatsID)
     cTokenStats.user = event.params.minter
+    cTokenStats.symbol = market.symbol
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
     cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
@@ -151,12 +152,13 @@ export function handleRedeem(event: Redeem): void {
   market.save()
 
   let userID = event.params.redeemer.toHex()
-  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStatsID = market.id.concat('-').concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   if (cTokenStats == null) {
     cTokenStats = new CTokenInfo(cTokenStatsID)
     cTokenStats.user = event.params.redeemer
+    cTokenStats.symbol = market.symbol
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
     cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
@@ -241,13 +243,14 @@ export function handleBorrow(event: Borrow): void {
 
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
-  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStatsID = market.id.concat('-').concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   // this is needed, since you could lend in one asset and borrow in another
   if (cTokenStats == null) {
     cTokenStats = new CTokenInfo(cTokenStatsID)
     cTokenStats.user = event.params.borrower
+    cTokenStats.symbol = market.symbol
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
     cTokenStats.underlyingSupplied = BigDecimal.fromString("0")
@@ -329,7 +332,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
-  let cTokenStatsID = market.symbol.concat('-').concat(userID)
+  let cTokenStatsID = market.id.concat('-').concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   let txHashes = cTokenStats.transactionHashes
@@ -450,7 +453,7 @@ export function handleTransfer(event: Transfer): void {
   market.save()
 
   /********** User From Updates Below **********/
-  let cTokenStatsFromID = market.symbol.concat('-').concat(event.params.from.toHex())
+  let cTokenStatsFromID = market.id.concat('-').concat(event.params.from.toHex())
   let cTokenStatsFrom = CTokenInfo.load(cTokenStatsFromID)
 
   let txHashesFrom = cTokenStatsFrom.transactionHashes
@@ -486,11 +489,12 @@ export function handleTransfer(event: Transfer): void {
     userTo.save()
   }
 
-  let cTokenStatsToID = market.symbol.concat('-').concat(userToID)
+  let cTokenStatsToID = market.id.concat('-').concat(userToID)
   let cTokenStatsTo = CTokenInfo.load(cTokenStatsToID)
   if (cTokenStatsTo == null) {
     cTokenStatsTo = new CTokenInfo(cTokenStatsToID)
     cTokenStatsTo.user = event.params.to
+    cTokenStatsTo.symbol = market.symbol
     cTokenStatsTo.transactionHashes = []
     cTokenStatsTo.transactionTimes = []
     cTokenStatsTo.underlyingSupplied = BigDecimal.fromString("0")

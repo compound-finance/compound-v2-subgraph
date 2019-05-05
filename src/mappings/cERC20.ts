@@ -109,7 +109,6 @@ export function handleMint(event: Mint): void {
   // However, it still works, but gives the stored state of the most recent block update
   // let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
   // cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  cTokenStats.underlyingSupplied = cTokenStats.underlyingSupplied.plus(event.params.mintAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
   // cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.minter).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
@@ -192,7 +191,6 @@ export function handleRedeem(event: Redeem): void {
   // let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
 
   // cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(event.params.redeemAmount.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")))
   // cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
   cTokenStats.cTokenBalance = contract.balanceOf(event.params.redeemer).toBigDecimal().div(BigDecimal.fromString("100000000"))
   cTokenStats.save()
@@ -481,7 +479,24 @@ export function handleTransfer(event: Transfer): void {
 
   market.save()
 
+  // Calculate the exchange rate and amount of underlying being transferred
+  let exchangeRate = contract.exchangeRateStored().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  let amountUnderlying = exchangeRate.times(event.params.amount.toBigDecimal())
+
   /********** User From Updates Below **********/
+  let userFromID = event.params.from.toHex()
+  let userFrom = User.load(userFromID)
+  if (userFrom == null) {
+    userFrom = new User(userFromID)
+    userFrom.cTokens = []
+    userFrom.countLiquidated = 0
+    userFrom.countLiquidator = 0
+    userFrom.totalBorrowInEth = BigDecimal.fromString("0")
+    userFrom.totalSupplyInEth = BigDecimal.fromString("0")
+    userFrom.hasBorrowed = false
+    userFrom.save()
+  }
+
   let cTokenStatsFromID = market.id.concat('-').concat(event.params.from.toHex())
   let cTokenStatsFrom = CTokenInfo.load(cTokenStatsFromID)
 
@@ -499,6 +514,7 @@ export function handleTransfer(event: Transfer): void {
   // cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
 
   // let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
+  cTokenStatsFrom.underlyingRedeemed = cTokenStatsFrom.underlyingRedeemed.minus(amountUnderlying)
   // cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
   // cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
   cTokenStatsFrom.save()
@@ -551,22 +567,11 @@ export function handleTransfer(event: Transfer): void {
 
   // let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
   // cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  cTokenStatsTo.underlyingSupplied = cTokenStatsTo.underlyingSupplied.plus(amountUnderlying)
   // cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
   cTokenStatsTo.save()
 
   /********** Liquidation Updates Below **********/
-  let userFromID = event.params.from.toHex()
-  let userFrom = User.load(userFromID)
-  if (userFrom == null) {
-    userFrom = new User(userFromID)
-    userFrom.cTokens = []
-    userFrom.countLiquidated = 0
-    userFrom.countLiquidator = 0
-    userFrom.totalBorrowInEth = BigDecimal.fromString("0")
-    userFrom.totalSupplyInEth = BigDecimal.fromString("0")
-    userFrom.hasBorrowed = false
-    userFrom.save()
-  }
   if (userFrom.hasBorrowed == true){
     calculateLiquidty(userFromID)
   }

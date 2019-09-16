@@ -79,7 +79,7 @@ export function handleMint(event: Mint): void {
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
   if (cTokenStats == null) {
     cTokenStats = new CTokenInfo(cTokenStatsID)
-    cTokenStats.user = event.params.minter
+    cTokenStats.user = event.params.minter.toHexString()
     cTokenStats.symbol = market.symbol
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
@@ -157,7 +157,7 @@ export function handleRedeem(event: Redeem): void {
 
   if (cTokenStats == null) {
     cTokenStats = new CTokenInfo(cTokenStatsID)
-    cTokenStats.user = event.params.redeemer
+    cTokenStats.user = event.params.redeemer.toHexString()
     cTokenStats.symbol = market.symbol
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
@@ -249,7 +249,7 @@ export function handleBorrow(event: Borrow): void {
   // this is needed, since you could lend in one asset and borrow in another
   if (cTokenStats == null) {
     cTokenStats = new CTokenInfo(cTokenStatsID)
-    cTokenStats.user = event.params.borrower
+    cTokenStats.user = event.params.borrower.toHexString()
     cTokenStats.symbol = market.symbol
     cTokenStats.transactionHashes = []
     cTokenStats.transactionTimes = []
@@ -493,7 +493,7 @@ export function handleTransfer(event: Transfer): void {
   let cTokenStatsTo = CTokenInfo.load(cTokenStatsToID)
   if (cTokenStatsTo == null) {
     cTokenStatsTo = new CTokenInfo(cTokenStatsToID)
-    cTokenStatsTo.user = event.params.to
+    cTokenStatsTo.user = event.params.to.toHexString()
     cTokenStatsTo.symbol = market.symbol
     cTokenStatsTo.transactionHashes = []
     cTokenStatsTo.transactionTimes = []

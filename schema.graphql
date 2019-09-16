@@ -36,7 +36,7 @@ type User @entity {
 type CTokenInfo @entity {
     id: ID!                             # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     symbol: String!
-    user: Bytes!                        # user address for one-to-many relationships
+    user: User!                        # user address for one-to-many relationships
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
     accrualBlockNumber: BigInt!         # block number the user balances are updated to

@@ -1,4 +1,4 @@
-import {Address, EthereumValue, BigDecimal} from '@graphprotocol/graph-ts'
+import {log, BigDecimal, Address, Bytes} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -8,15 +8,23 @@ import {
   Transfer,
   AccrueInterest,
   CErc20,
-} from '../types/cBAT/CErc20'
+} from '../types/cREP/CErc20'
+
+import {ERC20} from "../types/cREP/ERC20";
+
 
 import {
   Market,
   User,
-  CTokenInfo,
+  CTokenInfo, Comptroller,
 } from '../types/schema'
 
-import {truncateBigDecimal, getTokenEthRatio, calculateLiquidty} from "./helpers";
+import {calculateLiquidty, getTokenPrices} from "./helpers";
+// PriceOracle is valid from Comptroller deployment until block 8498421
+import {PriceOracle} from "../types/cREP/PriceOracle";
+// PriceOracle2 is valid from 8498422 until present block (until another proxy upgrade)
+import {PriceOracle2} from "../types/cREP/PriceOracle2";
+
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -33,10 +41,20 @@ export function handleMint(event: Mint): void {
   if (market == null) {
     market = new Market(marketID)
     market.symbol = contract.symbol()
-    market.tokenPerEthRatio = getTokenEthRatio(market.symbol)
-    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-    market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+    market.usersEntered = []
+    market.underlyingAddress = contract.underlying()
+    let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
+    market.underlyingDecimals = underlyingContract.decimals()
   }
+
+  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+    event.block.number.toI32(),
+    event.address, market.underlyingAddress as Address,
+    market.underlyingDecimals
+  )
+
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -92,7 +110,7 @@ export function handleMint(event: Mint): void {
     // cTokenStats.interestEarned =  BigDecimal.fromString("0")
     cTokenStats.cTokenBalance = BigDecimal.fromString("0")
     cTokenStats.totalBorrowed = BigDecimal.fromString("0")
-    cTokenStats.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStats.totalRepaid = BigDecimal.fromString("0")
     // cTokenStats.borrowBalance = BigDecimal.fromString("0")
     // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
@@ -114,7 +132,7 @@ export function handleMint(event: Mint): void {
   cTokenStats.save()
 
   /********** Liquidity Calculations Below **********/
-  if (user.hasBorrowed == true){
+  if (user.hasBorrowed == true) {
     calculateLiquidty(userID)
   }
 }
@@ -131,6 +149,15 @@ export function handleRedeem(event: Redeem): void {
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
   let contract = CErc20.bind(event.address)
+
+  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+    event.block.number.toI32(),
+    event.address, market.underlyingAddress as Address,
+    market.underlyingDecimals
+  )
+
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -172,7 +199,7 @@ export function handleRedeem(event: Redeem): void {
     // cTokenStats.interestEarned =  BigDecimal.fromString("0")
     cTokenStats.cTokenBalance = BigDecimal.fromString("0")
     cTokenStats.totalBorrowed = BigDecimal.fromString("0")
-    cTokenStats.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStats.totalRepaid = BigDecimal.fromString("0")
     // cTokenStats.borrowBalance = BigDecimal.fromString("0")
     // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
@@ -207,7 +234,7 @@ export function handleRedeem(event: Redeem): void {
     user.hasBorrowed = false
     user.save()
   }
-  if (user.hasBorrowed == true){
+  if (user.hasBorrowed == true) {
     calculateLiquidty(userID)
   }
 }
@@ -223,6 +250,15 @@ export function handleBorrow(event: Borrow): void {
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
   let contract = CErc20.bind(event.address)
+
+  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+    event.block.number.toI32(),
+    event.address, market.underlyingAddress as Address,
+    market.underlyingDecimals
+  )
+
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -265,7 +301,7 @@ export function handleBorrow(event: Borrow): void {
     // cTokenStats.interestEarned =  BigDecimal.fromString("0")
     cTokenStats.cTokenBalance = BigDecimal.fromString("0")
     cTokenStats.totalBorrowed = BigDecimal.fromString("0")
-    cTokenStats.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStats.totalRepaid = BigDecimal.fromString("0")
     // cTokenStats.borrowBalance = BigDecimal.fromString("0")
     // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
   }
@@ -316,6 +352,14 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   let market = Market.load(marketID)
   let contract = CErc20.bind(event.address)
 
+  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+    event.block.number.toI32(),
+    event.address, market.underlyingAddress as Address,
+    market.underlyingDecimals
+  )
+
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
 
@@ -371,7 +415,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     user.hasBorrowed = false
     user.save()
   }
-  if (user.hasBorrowed == true){
+  if (user.hasBorrowed == true) {
     calculateLiquidty(userID)
   }
 }
@@ -395,6 +439,14 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   let market = Market.load(marketID)
   let contract = CErc20.bind(event.address)
 
+  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+    event.block.number.toI32(),
+    event.address, market.underlyingAddress as Address,
+    market.underlyingDecimals
+  )
+
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
 
@@ -520,7 +572,7 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsFrom.save()
 
   /********** User To Updates Below **********/
-  // We do the same for userTo as we did for userFrom, but check if user and cTokenStats entities are null
+    // We do the same for userTo as we did for userFrom, but check if user and cTokenStats entities are null
   let userToID = event.params.to.toHex()
   let userTo = User.load(userToID)
   if (userTo == null) {
@@ -548,7 +600,7 @@ export function handleTransfer(event: Transfer): void {
     // cTokenStatsTo.interestEarned =  BigDecimal.fromString("0")
     cTokenStatsTo.cTokenBalance = BigDecimal.fromString("0")
     cTokenStatsTo.totalBorrowed = BigDecimal.fromString("0")
-    cTokenStatsTo.totalRepaid =  BigDecimal.fromString("0")
+    cTokenStatsTo.totalRepaid = BigDecimal.fromString("0")
     // cTokenStatsTo.borrowBalance = BigDecimal.fromString("0")
     // cTokenStatsTo.borrowInterest =  BigDecimal.fromString("0")
   }
@@ -572,7 +624,7 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.save()
 
   /********** Liquidation Updates Below **********/
-  if (userFrom.hasBorrowed == true){
+  if (userFrom.hasBorrowed == true) {
     calculateLiquidty(userFromID)
   }
   calculateLiquidty(userToID)
@@ -588,10 +640,20 @@ export function handleAccrueInterest(event: AccrueInterest): void {
   if (market == null) {
     market = new Market(marketID)
     market.symbol = contract.symbol()
-    market.tokenPerEthRatio = getTokenEthRatio(market.symbol)
-    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-    market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+    market.usersEntered = []
+    market.underlyingAddress = contract.underlying()
+    let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
+    market.underlyingDecimals = underlyingContract.decimals()
   }
+
+  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+    event.block.number.toI32(),
+    event.address, market.underlyingAddress as Address,
+    market.underlyingDecimals
+    )
+
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -606,7 +668,12 @@ export function handleAccrueInterest(event: AccrueInterest): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  let testing = contract.try_supplyRatePerBlock()
+  if (testing.reverted) {
+    log.info("***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted", [])
+  } else {
+    market.perBlockSupplyInterest = testing.value.toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  }
 
   // Now we must get the true erc20 balance of the CErc20.sol contract
   // Note we use the CErc20 interface because it is inclusive of ERC20s interface

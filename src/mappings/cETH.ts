@@ -1,4 +1,4 @@
-import {BigDecimal, BigInt, EthereumValue} from '@graphprotocol/graph-ts'
+import {Address, BigDecimal, BigInt, EthereumValue, log, Bytes} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -13,10 +13,11 @@ import {
 import {
   Market,
   User,
-  CTokenInfo,
+  CTokenInfo, Comptroller,
 } from '../types/schema'
 
-import {truncateBigDecimal, calculateLiquidty, getTokenEthRatio} from "./helpers";
+import {calculateLiquidty} from "./helpers";
+import {PriceOracle} from "../types/cETH/PriceOracle";
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -33,9 +34,22 @@ export function handleMint(event: Mint): void {
   if (market == null) {
     market = new Market(marketID)
     market.symbol = contract.symbol()
-    market.tokenPerEthRatio = BigDecimal.fromString("1")
-    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-      market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+    market.usersEntered = []
+  }
+
+  // Retrieve Prices
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let oracle = PriceOracle.bind(oracleAddress)
+  let tokenEthRatio = oracle.getPrice(event.address)// divide this by (10^18)
+  // It is USDC, which we assume = 1 real USD (same as comptroller)
+  if (event.address.toHexString() == "0x39aa39c021dfbae8fac545936693ac917d5e7563"){
+    market.tokenPerEthRatio = tokenEthRatio.toBigDecimal()
+    market.tokenPerUSDRatio = BigDecimal.fromString("1")
+  } else {
+    let usdPrice = oracle.getPrice(Address.fromString("0x39aa39c021dfbae8fac545936693ac917d5e7563")).toBigDecimal()
+    let tokenPerUSDRatio = market.tokenPerEthRatio.div(usdPrice)
+    market.tokenPerUSDRatio = tokenPerUSDRatio.truncate(18)
   }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
@@ -130,6 +144,21 @@ export function handleRedeem(event: Redeem): void {
   let market = Market.load(marketID)
   let contract = CEther.bind(event.address)
 
+  // Retrieve Prices
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let oracle = PriceOracle.bind(oracleAddress)
+  let tokenEthRatio = oracle.getPrice(event.address)// divide this by (10^18)
+  // It is USDC, which we assume = 1 real USD (same as comptroller)
+  if (event.address.toHexString() == "0x39aa39c021dfbae8fac545936693ac917d5e7563"){
+    market.tokenPerEthRatio = tokenEthRatio.toBigDecimal()
+    market.tokenPerUSDRatio = BigDecimal.fromString("1")
+  } else {
+    let usdPrice = oracle.getPrice(Address.fromString("0x39aa39c021dfbae8fac545936693ac917d5e7563")).toBigDecimal()
+    let tokenPerUSDRatio = market.tokenPerEthRatio.div(usdPrice)
+    market.tokenPerUSDRatio = tokenPerUSDRatio.truncate(18)
+  }
+
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
 
@@ -220,6 +249,21 @@ export function handleBorrow(event: Borrow): void {
   let market = Market.load(marketID)
   let contract = CEther.bind(event.address)
 
+  // Retrieve Prices
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let oracle = PriceOracle.bind(oracleAddress)
+  let tokenEthRatio = oracle.getPrice(event.address)// divide this by (10^18)
+  // It is USDC, which we assume = 1 real USD (same as comptroller)
+  if (event.address.toHexString() == "0x39aa39c021dfbae8fac545936693ac917d5e7563"){
+    market.tokenPerEthRatio = tokenEthRatio.toBigDecimal()
+    market.tokenPerUSDRatio = BigDecimal.fromString("1")
+  } else {
+    let usdPrice = oracle.getPrice(Address.fromString("0x39aa39c021dfbae8fac545936693ac917d5e7563")).toBigDecimal()
+    let tokenPerUSDRatio = market.tokenPerEthRatio.div(usdPrice)
+    market.tokenPerUSDRatio = tokenPerUSDRatio.truncate(18)
+  }
+
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
 
@@ -309,6 +353,21 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   let market = Market.load(marketID)
   let contract = CEther.bind(event.address)
 
+  // Retrieve Prices
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let oracle = PriceOracle.bind(oracleAddress)
+  let tokenEthRatio = oracle.getPrice(event.address)// divide this by (10^18)
+  // It is USDC, which we assume = 1 real USD (same as comptroller)
+  if (event.address.toHexString() == "0x39aa39c021dfbae8fac545936693ac917d5e7563"){
+    market.tokenPerEthRatio = tokenEthRatio.toBigDecimal()
+    market.tokenPerUSDRatio = BigDecimal.fromString("1")
+  } else {
+    let usdPrice = oracle.getPrice(Address.fromString("0x39aa39c021dfbae8fac545936693ac917d5e7563")).toBigDecimal()
+    let tokenPerUSDRatio = market.tokenPerEthRatio.div(usdPrice)
+    market.tokenPerUSDRatio = tokenPerUSDRatio.truncate(18)
+  }
+
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
 
@@ -372,6 +431,21 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
   let contract = CEther.bind(event.address)
+
+  // Retrieve Prices
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let oracle = PriceOracle.bind(oracleAddress)
+  let tokenEthRatio = oracle.getPrice(event.address)// divide this by (10^18)
+  // It is USDC, which we assume = 1 real USD (same as comptroller)
+  if (event.address.toHexString() == "0x39aa39c021dfbae8fac545936693ac917d5e7563"){
+    market.tokenPerEthRatio = tokenEthRatio.toBigDecimal()
+    market.tokenPerUSDRatio = BigDecimal.fromString("1")
+  } else {
+    let usdPrice = oracle.getPrice(Address.fromString("0x39aa39c021dfbae8fac545936693ac917d5e7563")).toBigDecimal()
+    let tokenPerUSDRatio = market.tokenPerEthRatio.div(usdPrice)
+    market.tokenPerUSDRatio = tokenPerUSDRatio.truncate(18)
+  }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -552,9 +626,22 @@ export function handleAccrueInterest(event: AccrueInterest): void {
   if (market == null) {
     market = new Market(marketID)
     market.symbol = contract.symbol()
-    market.tokenPerEthRatio = BigDecimal.fromString("1")
-    let noTruncRatio =  market.tokenPerEthRatio.div(BigDecimal.fromString("0.007")) //TODO - change for mainnet
-    market.tokenPerUSDRatio = truncateBigDecimal(noTruncRatio, 18)
+    market.usersEntered = []
+  }
+
+  // Retrieve Prices
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let oracle = PriceOracle.bind(oracleAddress)
+  let tokenEthRatio = oracle.getPrice(event.address)// divide this by (10^18)
+  // It is USDC, which we assume = 1 real USD (same as comptroller)
+  if (event.address.toHexString() == "0x39aa39c021dfbae8fac545936693ac917d5e7563"){
+    market.tokenPerEthRatio = tokenEthRatio.toBigDecimal()
+    market.tokenPerUSDRatio = BigDecimal.fromString("1")
+  } else {
+    let usdPrice = oracle.getPrice(Address.fromString("0x39aa39c021dfbae8fac545936693ac917d5e7563")).toBigDecimal()
+    let tokenPerUSDRatio = market.tokenPerEthRatio.div(usdPrice)
+    market.tokenPerUSDRatio = tokenPerUSDRatio.truncate(18)
   }
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
@@ -570,8 +657,12 @@ export function handleAccrueInterest(event: AccrueInterest): void {
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  market.perBlockSupplyInterest = contract.supplyRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-
+  let testing = contract.try_supplyRatePerBlock()
+  if (testing.reverted){
+    log.info("***CALL FAILED*** : cETH supplyRatePerBlock() reverted", [])
+  } else {
+    market.perBlockSupplyInterest = testing.value.toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  }
   // Now we must get the true eth balance of the CEther.sol contract
   market.totalCash = contract.getCash().toBigDecimal()
   // deposits = cash + borrows - reserves

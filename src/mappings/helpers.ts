@@ -1,52 +1,79 @@
 // For each division by 10, add one to exponent to truncate one significant figure
-import {BigDecimal, BigInt} from "@graphprotocol/graph-ts/index";
-import {CTokenInfo, Market, User} from "../types/schema";
+import {Address, BigDecimal, BigInt, log} from "@graphprotocol/graph-ts/index";
+import {CTokenInfo, Market, User, Comptroller} from "../types/schema";
 
-// Must keep all values left of the decimal, and then allow user to decide how many decimals they want
-export function truncateBigDecimal(bd: BigDecimal, decimalLength: i32): BigDecimal {
+// PriceOracle is valid from Comptroller deployment until block 8498421
+import {PriceOracle} from "../types/cREP/PriceOracle";
+// PriceOracle2 is valid from 8498422 until present block (until another proxy upgrade)
+import {PriceOracle2} from "../types/cREP/PriceOracle2";
+import {SmartContract} from "../../../../../core/graph-ts";
 
-  // Figuring out how many digits to truncate
-  // exp is negative if there are decimals, so we add it, unintuitively
-  let largerThanZeroLength = bd.digits.toString().length + bd.exp.toI32()
-
-  // if largerThanZeroLength is negative, then digit length will be less than 18, which is okay
-  let newDigitLength = decimalLength + largerThanZeroLength
-  let lengthToTruncate = bd.digits.toString().length - newDigitLength
-
-  // This means it was originally smaller than desired decimalLength, so do nothing
-  if (lengthToTruncate < 0) {
-    return bd
-  } else {
-    // This will shave off the length of the full digits to what is desired
-    for (let i = 0; i < lengthToTruncate; i++) {
-      bd.digits = bd.digits.div(BigInt.fromI32(10))
-    }
-    // simply set the exp to what was desired (* -1 because it must be negative, but as parameter it is passed in postive
-    bd.exp = BigInt.fromI32(decimalLength* -1)
-    return bd
+function exponentToBigDecimal(decimals: i32): BigDecimal {
+  let bd = BigDecimal.fromString('1')
+  for (let i = 0; i < decimals; i++) {
+    bd = bd.times(BigDecimal.fromString('10'))
   }
+  return bd
 }
 
-/*
-Because a SimplePriceOracle is used for rinkeby, we just hardcode these values in
-TODO - on mainnet, we must source the PriceOracle events to get USD values
-cBAT = 2000000000000000*10^-18 = 0.002 bat/eth
-cDAI = 7000000000000000*10^-18 = 0.007 dai/eth - note, this essentially means 1 USD = .007, or 1 ETH = $142.857
-cETH = 1000000000000000000*10^-18 = 1 eth/eth
-cREP = 102000000000000000*10^-18 = .102 rep/eth
-cZRX = 2200000000000000*10^-18 = 0.0022 zrx/eth
- */
+let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
 
-export function getTokenEthRatio(symbol: string): BigDecimal {
-  if (symbol == "cBAT") {
-    return BigDecimal.fromString("0.002")
-  } else if (symbol == "cDAI") {
-    return BigDecimal.fromString("0.007")
-  } else if (symbol == "cREP") {
-    return BigDecimal.fromString("0.102")
+export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyingAddress: Address, underlyingDecimals: i32): Array<BigDecimal> {
+  let comptroller = Comptroller.load("1")
+  let oracleAddress = comptroller.priceOracle as Address
+  let tokenPerEthRatio: BigDecimal
+  let tokenPerUSDRatio: BigDecimal
+  let cUSDCAddress = "0x39aa39c021dfbae8fac545936693ac917d5e7563"
+  let USDCAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "
+  let cDAIAddress = "0xf5dce57282a584d2746faf1593d3121fcac444dc"
+  let DAIAddress = "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359 "
+  let priceOracle1Address = Address.fromString("02557a5e05defeffd4cae6d83ea3d173b272c904")
+
+
+  /* PriceOracle2 is used at the block the Comptroller starts using it.
+   * see here https://etherscan.io/address/0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b#events
+   * This must use the cToken address.
+   * Note this returns the value without factoring in token decimals and wei, so we must divide
+   * the number by (ethDecimals - tokenDecimals) and again by the mantissa.
+   * USDC would be 10 ^ ((18 - 6) + 18) = 10 ^ 30
+   * Note that they deployed 3 different PriceOracles at the beginning of the Comptroller,
+   * and that they handle the decimals different, which can break the subgraph. So we actually
+   * defer to Oracle 1, which works, until this one is deployed, which was used for 121 days*/
+  if (blockNumber > 7715908) {
+    let mantissaDecimalFactor = 18 - underlyingDecimals + 18
+    let bdFactor = exponentToBigDecimal(mantissaDecimalFactor)
+    let oracle2 = PriceOracle2.bind(oracleAddress)
+    tokenPerEthRatio = oracle2.getUnderlyingPrice(eventAddress).toBigDecimal().div(bdFactor)
+
+    // It is USDC, which we assume = 1 real USD (same as comptroller)
+    if (eventAddress.toHexString() == cUSDCAddress) {
+      tokenPerUSDRatio = BigDecimal.fromString("1")
+    } else {
+      let mantissaDecimalFactorUSDC = 18 - 6 + 18
+      let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
+      let usdPrice = oracle2.getUnderlyingPrice(Address.fromString(cUSDCAddress)).toBigDecimal().div(bdFactorUSDC)
+      let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+      tokenPerUSDRatio.truncate(18)
+    }
+
+    /* PriceOracle is used (only for the first ~100 blocks of Comptroller. Annoying but we must handle this.
+     * We use it for more than 100 blocks, see reason at top of if statement for PriceOracle2
+     * This must use the token address, not the cToken address
+     * Note this returns the value already factoring in token decimals and wei, therefore
+     * we only need to divide by the mantissa, 10^18 */
   } else {
-    return BigDecimal.fromString("0.0022") // else must be cZRX here
+    let oracle1 = PriceOracle.bind(priceOracle1Address)
+    tokenPerEthRatio = oracle1.getPrice(underlyingAddress).toBigDecimal().div(mantissaFactorBD)
+    // It is USDC, which we assume = 1 real USD (same as comptroller)
+    if (eventAddress.toHexString() == cUSDCAddress) {
+      tokenPerUSDRatio = BigDecimal.fromString("1")
+    } else {
+      let usdPrice = oracle1.getPrice(Address.fromString(USDCAddress)).toBigDecimal().div(mantissaFactorBD)
+      let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+      tokenPerUSDRatio.truncate(18)
+    }
   }
+  return [tokenPerEthRatio, tokenPerUSDRatio]
 }
 
 

@@ -1,5 +1,15 @@
- type Market @entity {
+type Comptroller @entity {
+    id: ID!                                 # 1
+    priceOracle: Bytes
+    closeFactor: BigInt
+    liquidationIncentive: BigInt
+    maxAssets: BigInt
+}
+
+type Market @entity {
     id: ID!                                 # Ctoken Address
+    underlyingAddress: Bytes!               # Underlying token address
+    underlyingDecimals: Int!
     symbol: String!                         # cDAI, cBAT, etc.
     accrualBlockNumber: BigInt!             # Block number the market is updated to
     tokenPerEthRatio: BigDecimal!           # How many tokens equal 1 ETH. 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
@@ -15,14 +25,19 @@
     totalBorrows: BigDecimal!               # Total borrows for the market
     perBlockBorrowInterest: BigDecimal!     # To get Annual Percent Return (APR) : perBlockBorrowInterest * 2102400
     borrowIndex: BigDecimal!                # The history of the markets borrow index return since inception. (Think S&P 500)
+
+    # Populated by Comptroller events
+    usersEntered: [Bytes!]!
+    collateralFactor: BigDecimal
+
 }
 
 # Note - account liqidity is how much ETH is available to be collaterailzed, but keep in mind it still needs to
 # meet the 150%. So 150 ETH would mean if you borrowed 100 ETH, it would go to 0 for liquidity.
 type User @entity {
     id: ID!                                                 # user eth address
-    cTokens: [CTokenInfo!]! @derivedFrom(field: "user")    # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
-    totalSupplyInEth: BigDecimal!                           # Add together all assets supplied
+    cTokens: [CTokenInfo!]! @derivedFrom(field: "user")     # derivedFrom will allow all CTokenStats to have a one-to-many-relationship
+    totalSupplyInEth: BigDecimal!                           # Add together all assets  supplied
     totalBorrowInEth: BigDecimal!                           # Add together all assets borrowed from user
 #    accountLiquidity: BigDecimal                            # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization (dangerous), if 150% is required. If null, it means the user currently has no borrows in the protocol TODO - delay implementing until query time calculations
 #    availableToBorrowEth: BigDecimal                        # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null, it means the user currently has no borrows in the protocol. NOTE - collateral will not always be 1.5, this needs to be checked out when Comptroller is released TODO - delay implementing until query time calculations
@@ -36,7 +51,7 @@ type User @entity {
 type CTokenInfo @entity {
     id: ID!                             # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     symbol: String!
-    user: User!                        # user address for one-to-many relationships
+    user: User!                         # user address for one-to-many relationships
     transactionHashes: [Bytes!]!        # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!           # each tx block time is recorded. makes for easily displaying in a Dapp
     accrualBlockNumber: BigInt!         # block number the user balances are updated to

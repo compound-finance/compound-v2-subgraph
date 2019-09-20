@@ -9,7 +9,7 @@
   dependencies:
     regenerator-runtime "^0.13.2"
 
-"@graphprotocol/graph-cli@^0.15.0":
+"@graphprotocol/graph-cli@^0.15.1":
   version "0.15.0"
   resolved "https://registry.yarnpkg.com/@graphprotocol/graph-cli/-/graph-cli-0.15.0.tgz#85bad509a55e212c2dc8f3e5113cdfc6323224d8"
   integrity sha512-7wfHRDDxKbOrcp9c71dxqDIYviKPyDvApD1oC51fOWLsm6aFe9mFmZDfF3jp+hIeYvSX6dBwakNAphsX9cc1jA==
@@ -34,10 +34,10 @@
   optionalDependencies:
     keytar "^4.6.0"
 
-"@graphprotocol/graph-ts@^0.15.0":
-  version "0.15.0"
-  resolved "https://registry.yarnpkg.com/@graphprotocol/graph-ts/-/graph-ts-0.15.0.tgz#6a2429f31ec7ac5f582101a75a0e780c6b95c462"
-  integrity sha512-rYrIUDNGdQTxU+UogI5OhjP73LL8B9jwB29jysztaaSRqJumf8DEmftG0K42+7CvWtYfpiZNKpGpKt/xUR80NQ==
+"@graphprotocol/graph-ts@^0.15.1":
+  version "0.15.1"
+  resolved "https://registry.yarnpkg.com/@graphprotocol/graph-ts/-/graph-ts-0.15.1.tgz#d6cc85197e45dda9bb4083654c183470ff23333e"
+  integrity sha512-l5veH44ULpKq1kLudbfJctgxLaLpnLnYiDIIZn+N8UC1SrpqjLhJyRMfm+uH4xTglmAwI74wyynKWktXp44/iw==
   dependencies:
     assemblyscript "https://github.com/AssemblyScript/assemblyscript#36040d5b5312f19a025782b5e36663823494c2f3"
 

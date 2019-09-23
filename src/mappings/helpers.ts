@@ -59,11 +59,11 @@ export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyi
       let mantissaDecimalFactorUSDC = 18 - 6 + 18
       let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
       let usdPrice = oracle2.getUnderlyingPrice(Address.fromString(cUSDCAddress)).toBigDecimal().div(bdFactorUSDC)
-      log.info("⚠️⚠️ usd price: {} ", [usdPrice.toString()])
+      // log.info("⚠️⚠️ usd price: {} ", [usdPrice.toString()])
       let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-      log.info("⚠️⚠️ tokenPerUSDRatio before truncate: {} ", [tokenPerUSDRatio.toString()])
+      // log.info("⚠️⚠️ tokenPerUSDRatio before truncate: {} ", [tokenPerUSDRatio.toString()])
       // tokenPerUSDRatio.truncate(18)
-      log.info("⚠️⚠️ tokenPerUSDRatio after truncate: {} ", [tokenPerUSDRatio.toString()])
+      // log.info("⚠️⚠️ tokenPerUSDRatio after truncate: {} ", [tokenPerUSDRatio.toString()])
 
     }
 
@@ -80,7 +80,7 @@ export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyi
       tokenPerUSDRatio = BigDecimal.fromString("1")
     } else {
       let usdPrice = oracle1.getPrice(Address.fromString(USDCAddress)).toBigDecimal().div(mantissaFactorBD)
-      log.info("usd price: {} ", [usdPrice.toString()])
+      // log.info("usd price: {} ", [usdPrice.toString()])
       let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
       tokenPerUSDRatio.truncate(18)
     }
@@ -114,8 +114,8 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): CErc20 {
     market.underlyingAddress as Address,
     market.underlyingDecimals
   )
-  log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
-  log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
+  // log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
+  // log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
 
 
   market.tokenPerEthRatio = tokenPrices.eth
@@ -173,8 +173,8 @@ export function updateMarketEth(marketAddress: Address, blockNumber: i32): CEthe
     market.underlyingAddress as Address,
     market.underlyingDecimals
   )
-  log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
-  log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
+  // log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
+  // log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
 
 
   market.tokenPerEthRatio = tokenPrices.eth

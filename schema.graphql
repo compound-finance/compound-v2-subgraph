@@ -8,7 +8,7 @@ type Comptroller @entity {
 
 type Market @entity {
     id: ID!                                 # Ctoken Address
-    underlyingAddress: Bytes!               # Underlying token address
+    underlyingAddress: Bytes               # Underlying token address
     underlyingDecimals: Int!
     symbol: String!                         # cDAI, cBAT, etc.
     accrualBlockNumber: BigInt!             # Block number the market is updated to

@@ -1,4 +1,4 @@
-import {Address, BigDecimal, BigInt, EthereumValue, log, Bytes} from '@graphprotocol/graph-ts'
+import {log, BigDecimal} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -13,10 +13,10 @@ import {
 import {
   Market,
   User,
-  CTokenInfo, Comptroller,
+  CTokenInfo,
 } from '../types/schema'
 
-import {calculateLiquidty, updateMarket} from "./helpers";
+import {calculateLiquidty, updateMarketEth} from "./helpers";
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -26,7 +26,7 @@ import {calculateLiquidty, updateMarket} from "./helpers";
  *  note - mints  originate from the cToken address, not 0x000000, which is typical of ERC-20s
  */
 export function handleMint(event: Mint): void {
-  let cTokenContract = updateMarket(event.address, event.block.number.toI32())
+  let cTokenContract = updateMarketEth(event.address, event.block.number.toI32())
 
   /********** User Below **********/
 
@@ -94,7 +94,7 @@ export function handleMint(event: Mint): void {
  *  event.redeemer is the user
  */
 export function handleRedeem(event: Redeem): void {
-  let cTokenContract = updateMarket(event.address, event.block.number.toI32())
+  let cTokenContract = updateMarketEth(event.address, event.block.number.toI32())
 
   let userID = event.params.redeemer.toHex()
   let cTokenStatsID = event.address.toHexString().concat('-').concat(userID)
@@ -161,7 +161,7 @@ export function handleRedeem(event: Redeem): void {
  * event.params.borrower = the user
  */
 export function handleBorrow(event: Borrow): void {
-  let cTokenContract = updateMarket(event.address, event.block.number.toI32())
+  let cTokenContract = updateMarketEth(event.address, event.block.number.toI32())
 
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
@@ -227,7 +227,7 @@ export function handleBorrow(event: Borrow): void {
  * event.params.payer = the payer
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
-  let cTokenContract = updateMarket(event.address, event.block.number.toI32())
+  let cTokenContract = updateMarketEth(event.address, event.block.number.toI32())
 
   /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
@@ -267,7 +267,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 */
 
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
-  let cTokenContract = updateMarket(event.address, event.block.number.toI32())
+  let cTokenContract = updateMarketEth(event.address, event.block.number.toI32())
 
   /********** User Updates Below **********/
   let liquidatorID = event.params.liquidator.toHex()
@@ -419,5 +419,5 @@ export function handleTransfer(event: Transfer): void {
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {
-  updateMarket(event.address, event.block.number.toI32())
+  updateMarketEth(event.address, event.block.number.toI32())
 }

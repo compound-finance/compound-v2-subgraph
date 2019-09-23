@@ -8,6 +8,12 @@ import {PriceOracle} from "../types/cREP/PriceOracle";
 import {PriceOracle2} from "../types/cREP/PriceOracle2";
 import {CErc20} from "../types/cREP/CErc20";
 import {ERC20} from "../types/cREP/ERC20";
+import {CEther} from "../types/cETH/CEther";
+
+class Prices {
+  usd: BigDecimal
+  eth: BigDecimal
+}
 
 function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -19,7 +25,7 @@ function exponentToBigDecimal(decimals: i32): BigDecimal {
 
 let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
 
-export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyingAddress: Address, underlyingDecimals: i32): Array<BigDecimal> {
+export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyingAddress: Address, underlyingDecimals: i32): Prices {
   let comptroller = Comptroller.load("1")
   let oracleAddress = comptroller.priceOracle as Address
   let tokenPerEthRatio: BigDecimal
@@ -53,8 +59,12 @@ export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyi
       let mantissaDecimalFactorUSDC = 18 - 6 + 18
       let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
       let usdPrice = oracle2.getUnderlyingPrice(Address.fromString(cUSDCAddress)).toBigDecimal().div(bdFactorUSDC)
+      log.info("⚠️⚠️ usd price: {} ", [usdPrice.toString()])
       let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-      tokenPerUSDRatio.truncate(18)
+      log.info("⚠️⚠️ tokenPerUSDRatio before truncate: {} ", [tokenPerUSDRatio.toString()])
+      // tokenPerUSDRatio.truncate(18)
+      log.info("⚠️⚠️ tokenPerUSDRatio after truncate: {} ", [tokenPerUSDRatio.toString()])
+
     }
 
     /* PriceOracle is used (only for the first ~100 blocks of Comptroller. Annoying but we must handle this.
@@ -70,11 +80,17 @@ export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyi
       tokenPerUSDRatio = BigDecimal.fromString("1")
     } else {
       let usdPrice = oracle1.getPrice(Address.fromString(USDCAddress)).toBigDecimal().div(mantissaFactorBD)
+      log.info("usd price: {} ", [usdPrice.toString()])
       let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
       tokenPerUSDRatio.truncate(18)
     }
   }
-  return [tokenPerEthRatio, tokenPerUSDRatio]
+
+  let prices: Prices = {
+    eth: tokenPerUSDRatio,
+    usd: tokenPerEthRatio
+  }
+  return prices
 }
 
 export function updateMarket(marketAddress: Address, blockNumber: i32): CErc20 {
@@ -92,15 +108,18 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): CErc20 {
     market.underlyingDecimals = underlyingContract.decimals()
   }
 
-  let tokenPrices: Array<BigDecimal> = getTokenPrices(
+  let tokenPrices: Prices = getTokenPrices(
     blockNumber,
     marketAddress,
     market.underlyingAddress as Address,
     market.underlyingDecimals
   )
+  log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
+  log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
 
-  market.tokenPerEthRatio = tokenPrices[0]
-  market.tokenPerUSDRatio = tokenPrices[1]
+
+  market.tokenPerEthRatio = tokenPrices.eth
+  market.tokenPerUSDRatio = tokenPrices.usd
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -127,6 +146,62 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): CErc20 {
   let erc20TokenContract = CErc20.bind(contract.underlying())
   let cash = erc20TokenContract.balanceOf(marketAddress)
   market.totalCash = cash.toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // deposits = cash + borrows - reserves
+  market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)
+  market.save()
+
+  return contract
+}
+
+export function updateMarketEth(marketAddress: Address, blockNumber: i32): CEther {
+  let marketID = marketAddress.toHex()
+  let market = Market.load(marketID)
+  let contract = CEther.bind(marketAddress)
+
+  // Accrue interest can be called before mint event, so this must be here
+  if (market == null) {
+    market = new Market(marketID)
+    market.symbol = contract.symbol()
+    market.usersEntered = []
+    market.underlyingDecimals = 18
+  }
+
+  let tokenPrices: Prices = getTokenPrices(
+    blockNumber,
+    marketAddress,
+    market.underlyingAddress as Address,
+    market.underlyingDecimals
+  )
+  log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
+  log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
+
+
+  market.tokenPerEthRatio = tokenPrices.eth
+  market.tokenPerUSDRatio = tokenPrices.usd
+
+  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
+
+  // 10^28, removing 10^18 for exp precision, and then token precision / ctoken precision -> 10^18/10^8 = 10^10
+  market.exchangeRate = contract.exchangeRateStored().toBigDecimal()
+    .div(BigDecimal.fromString("10000000000000000000000000000"))
+
+  market.totalReserves = contract.totalReserves().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.totalBorrows = contract.totalBorrows().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  market.borrowIndex = contract.borrowIndex().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+
+  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+  market.perBlockBorrowInterest = contract.borrowRatePerBlock().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  let testing = contract.try_supplyRatePerBlock() //TODO make this more robust. technically if it fails, we can calculate on our side the value , since supply rate is a derivative of borrow
+  if (testing.reverted) {
+    log.info("***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted", [])
+  } else {
+    market.perBlockSupplyInterest = testing.value.toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  }
+
+  // Now we must get the true eth balance
+  market.totalCash = contract.getCash().toBigDecimal() // TODO - make sure this is correct
 
   // deposits = cash + borrows - reserves
   market.totalDeposits = market.totalCash.plus(market.totalBorrows).minus(market.totalReserves)

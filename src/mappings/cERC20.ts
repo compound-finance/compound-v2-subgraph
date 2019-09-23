@@ -1,4 +1,4 @@
-import {log, BigDecimal, Address, Bytes} from '@graphprotocol/graph-ts'
+import {log, BigDecimal} from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -14,7 +14,6 @@ import {
   Market,
   User,
   CTokenInfo,
-  Comptroller,
 } from '../types/schema'
 
 import {calculateLiquidty, updateMarket} from "./helpers";

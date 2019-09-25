@@ -10,11 +10,6 @@ import {CErc20} from "../types/cREP/CErc20";
 import {ERC20} from "../types/cREP/ERC20";
 import {CEther} from "../types/cETH/CEther";
 
-class Prices {
-  usd: BigDecimal
-  eth: BigDecimal
-}
-
 function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
   for (let i = 0; i < decimals; i++) {
@@ -25,27 +20,32 @@ function exponentToBigDecimal(decimals: i32): BigDecimal {
 
 let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
 
-export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyingAddress: Address, underlyingDecimals: i32): Prices {
+export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyingAddress: Address, underlyingDecimals: i32): Array<BigDecimal> {
   let comptroller = Comptroller.load("1")
   let oracleAddress = comptroller.priceOracle as Address
   let tokenPerEthRatio: BigDecimal
   let tokenPerUSDRatio: BigDecimal
   let cUSDCAddress = "0x39aa39c021dfbae8fac545936693ac917d5e7563"
   let USDCAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "
-  let cDAIAddress = "0xf5dce57282a584d2746faf1593d3121fcac444dc"
-  let DAIAddress = "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359 "
+  // let cDAIAddress = "0xf5dce57282a584d2746faf1593d3121fcac444dc" // not in use
+  // let DAIAddress = "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359 " // not in use
   let priceOracle1Address = Address.fromString("02557a5e05defeffd4cae6d83ea3d173b272c904")
-
 
   /* PriceOracle2 is used at the block the Comptroller starts using it.
    * see here https://etherscan.io/address/0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b#events
+   * Search for event topic 0xd52b2b9b7e9ee655fcb95d2e5b9e0c9f69e7ef2b8e9d2d0ea78402d576d22e22,
+   * and see block 7715908.
+   *
    * This must use the cToken address.
+   *
    * Note this returns the value without factoring in token decimals and wei, so we must divide
    * the number by (ethDecimals - tokenDecimals) and again by the mantissa.
    * USDC would be 10 ^ ((18 - 6) + 18) = 10 ^ 30
+   *
    * Note that they deployed 3 different PriceOracles at the beginning of the Comptroller,
    * and that they handle the decimals different, which can break the subgraph. So we actually
-   * defer to Oracle 1, which works, until this one is deployed, which was used for 121 days*/
+   * defer to Oracle 1 before block 7715908, which works,
+   * until this one is deployed, which was used for 121 days */
   if (blockNumber > 7715908) {
     let mantissaDecimalFactor = 18 - underlyingDecimals + 18
     let bdFactor = exponentToBigDecimal(mantissaDecimalFactor)
@@ -59,17 +59,16 @@ export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyi
       let mantissaDecimalFactorUSDC = 18 - 6 + 18
       let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
       let usdPrice = oracle2.getUnderlyingPrice(Address.fromString(cUSDCAddress)).toBigDecimal().div(bdFactorUSDC)
-      // log.info("⚠️⚠️ usd price: {} ", [usdPrice.toString()])
-      let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-      // log.info("⚠️⚠️ tokenPerUSDRatio before truncate: {} ", [tokenPerUSDRatio.toString()])
-      // tokenPerUSDRatio.truncate(18)
-      // log.info("⚠️⚠️ tokenPerUSDRatio after truncate: {} ", [tokenPerUSDRatio.toString()])
-
+      tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+      tokenPerUSDRatio.truncate(18)
     }
 
-    /* PriceOracle is used (only for the first ~100 blocks of Comptroller. Annoying but we must handle this.
-     * We use it for more than 100 blocks, see reason at top of if statement for PriceOracle2
-     * This must use the token address, not the cToken address
+    /* PriceOracle(1) is used (only for the first ~100 blocks of Comptroller. Annoying but we must
+     * handle this. We use it for more than 100 blocks, see reason at top of if statement
+     * of PriceOracle2.
+     *
+     * This must use the token address, not the cToken address.
+     *
      * Note this returns the value already factoring in token decimals and wei, therefore
      * we only need to divide by the mantissa, 10^18 */
   } else {
@@ -80,17 +79,11 @@ export function getTokenPrices(blockNumber: i32, eventAddress: Address, underlyi
       tokenPerUSDRatio = BigDecimal.fromString("1")
     } else {
       let usdPrice = oracle1.getPrice(Address.fromString(USDCAddress)).toBigDecimal().div(mantissaFactorBD)
-      // log.info("usd price: {} ", [usdPrice.toString()])
-      let tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+      tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
       tokenPerUSDRatio.truncate(18)
     }
   }
-
-  let prices: Prices = {
-    eth: tokenPerUSDRatio,
-    usd: tokenPerEthRatio
-  }
-  return prices
+  return [tokenPerEthRatio, tokenPerUSDRatio]
 }
 
 export function updateMarket(marketAddress: Address, blockNumber: i32): CErc20 {
@@ -108,18 +101,15 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): CErc20 {
     market.underlyingDecimals = underlyingContract.decimals()
   }
 
-  let tokenPrices: Prices = getTokenPrices(
+  let tokenPrices = getTokenPrices(
     blockNumber,
     marketAddress,
     market.underlyingAddress as Address,
     market.underlyingDecimals
   )
-  // log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
-  // log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
 
-
-  market.tokenPerEthRatio = tokenPrices.eth
-  market.tokenPerUSDRatio = tokenPrices.usd
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))
@@ -167,18 +157,15 @@ export function updateMarketEth(marketAddress: Address, blockNumber: i32): CEthe
     market.underlyingDecimals = 18
   }
 
-  let tokenPrices: Prices = getTokenPrices(
+  let tokenPrices = getTokenPrices(
     blockNumber,
     marketAddress,
     market.underlyingAddress as Address,
     market.underlyingDecimals
   )
-  // log.info("⚠️⚠️ tokenPrices[0] : {} ", [tokenPrices.eth.toString()])
-  // log.info("⚠️⚠️ tokenPrices[1] : {} ", [tokenPrices.usd.toString()])
 
-
-  market.tokenPerEthRatio = tokenPrices.eth
-  market.tokenPerUSDRatio = tokenPrices.usd
+  market.tokenPerEthRatio = tokenPrices[0]
+  market.tokenPerUSDRatio = tokenPrices[1]
 
   market.accrualBlockNumber = contract.accrualBlockNumber()
   market.totalSupply = contract.totalSupply().toBigDecimal().div(BigDecimal.fromString("100000000"))

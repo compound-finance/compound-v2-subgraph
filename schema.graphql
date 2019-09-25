@@ -8,8 +8,8 @@ type Comptroller @entity {
 
 type Market @entity {
     id: ID!                                 # Ctoken Address
-    underlyingAddress: Bytes               # Underlying token address
-    underlyingDecimals: Int!
+    underlyingAddress: Bytes!                # Underlying token address (eth is null)
+    underlyingDecimals: Int!                # Undelying decimals (eth is 18)
     symbol: String!                         # cDAI, cBAT, etc.
     accrualBlockNumber: BigInt!             # Block number the market is updated to
     tokenPerEthRatio: BigDecimal!           # How many tokens equal 1 ETH. 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH

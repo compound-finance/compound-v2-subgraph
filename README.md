@@ -21,6 +21,9 @@ These contracts were left out:
 - `StableCoinInterestRateModel.sol` - No data was chosen to be sourced from here
 - `StandardInterestRateModel.sol` - No data was chosen to be sourced from here
 
+### ABI
+
+The ABI used is `ctoken.json`. It is a stripped down version of the full abi provided by compound, that satisfies the calls we need to make for both cETH and cERC20 contracts. This way we can use 1 ABI file, and one mapping for cETH and cERC20. 
 
 ## Getting started with querying
 Below are a few ways to show how to query the Compound V2 Subgraph for data. The queries show most of the information that is queryable, but there are many other filtering options that can be used, just check out the [querying api](https://github.com/graphprotocol/graph-node/blob/master/docs/graphql-api.md).

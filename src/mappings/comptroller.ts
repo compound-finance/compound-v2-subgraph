@@ -1,4 +1,6 @@
-import {BigDecimal} from '@graphprotocol/graph-ts'
+/* eslint-disable prefer-const */ // to satisfy AS compiler
+
+import { BigDecimal } from '@graphprotocol/graph-ts'
 import {
   MarketEntered,
   MarketExited,
@@ -6,13 +8,10 @@ import {
   NewCollateralFactor,
   NewLiquidationIncentive,
   NewMaxAssets,
-  NewPriceOracle
+  NewPriceOracle,
 } from '../types/comptroller/Comptroller'
 
-import {
-  Market,
-  Comptroller,
-} from '../types/schema'
+import { Market, Comptroller } from '../types/schema'
 
 // TODO - uncomment when i am not testing with just REP
 export function handleMarketEntered(event: MarketEntered): void {
@@ -35,9 +34,8 @@ export function handleMarketExited(event: MarketExited): void {
   // market.save()
 }
 
-
 export function handleNewCloseFactor(event: NewCloseFactor): void {
-  let comptroller = Comptroller.load("1")
+  let comptroller = Comptroller.load('1')
   comptroller.closeFactor = event.params.newCloseFactorMantissa
   comptroller.save()
 }
@@ -51,25 +49,23 @@ export function handleNewCollateralFactor(event: NewCollateralFactor): void {
 
 // This should still be the first event.... weird
 export function handleNewLiquidationIncentive(event: NewLiquidationIncentive): void {
-  let comptroller = Comptroller.load("1")
+  let comptroller = Comptroller.load('1')
   comptroller.liquidationIncentive = event.params.newLiquidationIncentiveMantissa
   comptroller.save()
 }
 
 export function handleNewMaxAssets(event: NewMaxAssets): void {
-  let comptroller = Comptroller.load("1")
+  let comptroller = Comptroller.load('1')
   comptroller.maxAssets = event.params.newMaxAssets
   comptroller.save()
 }
 
 export function handleNewPriceOracle(event: NewPriceOracle): void {
-  let comptroller = Comptroller.load("1")
+  let comptroller = Comptroller.load('1')
   // This is the first event used in this mapping, so we use it to create the entity
   if (comptroller == null) {
-    comptroller = new Comptroller("1")
+    comptroller = new Comptroller('1')
   }
   comptroller.priceOracle = event.params.newPriceOracle
   comptroller.save()
 }
-
-

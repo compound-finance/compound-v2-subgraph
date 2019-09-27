@@ -59,13 +59,14 @@ type CTokenInfo @entity {
 
     accrualBlockNumber: BigInt!             # block number the user balances are updated to
     cTokenBalance: BigDecimal!              # total ctokens the user owns of this asset
-    underlyingSupplied: BigDecimal!         # Total amount the user has supplied of the underlying ERC20 or ETH
-    underlyingRedeemed: BigDecimal!         # Total amount the user has redeemed of the underlying ERC20 or ETH
+    totalUnderlyingSupplied: BigDecimal!         # Total amount the user has supplied of the underlying ERC20 or ETH
+    totalUnderlyingRedeemed: BigDecimal!         # Total amount the user has redeemed of the underlying ERC20 or ETH
     userBorrowIndex: BigDecimal!            # The value of the borrowIndex upon users last borrow interaction (used to calculate unrealizedBorowBalance)
-    underlyingBorrowed: BigDecimal!         # Total borrow, exclusive of interest
-    underlyingRepaid: BigDecimal!           # Total repaid
+    totalUnderlyingBorrowed: BigDecimal!         # Total borrow, exclusive of interest
+    totalUnderlyingRepaid: BigDecimal!           # Total repaid
 
     ### These values are only up to date to the last event the user interacted with, and shouldn't be displayed in a dapp. Display unrealized values to users
+    ### realizedLendBalance and realizedBorrowBalance are what are stored in the smart contract
     realizedLendBalance: BigDecimal!        # realizedLendBalance =  cTokenBalance * market.exchangeRate
     realizedSupplyInterest: BigDecimal!     # realizedSupplyInterest = realizedLendBalance - underlyingSupplied + underlyingRedeemed
     realizedBorrowBalance: BigDecimal!      # realizedBorrowBalance = previousRealizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex

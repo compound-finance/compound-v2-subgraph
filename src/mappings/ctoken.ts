@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
-import { log, BigDecimal, BigInt } from '@graphprotocol/graph-ts'
+import { log, BigDecimal, BigInt, EthereumValue } from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -10,7 +10,7 @@ import {
   Transfer,
   AccrueInterest,
   CToken,
-  NewReserveFactor
+  NewReserveFactor,
 } from '../types/cREP/CToken'
 
 import { Market, User, CTokenInfo } from '../types/schema'
@@ -18,7 +18,7 @@ import { Market, User, CTokenInfo } from '../types/schema'
 import { calculateLiquidty, updateMarket, createCTokenInfo } from './helpers'
 
 /*  User supplies assets into market and receives cTokens in exchange
- *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
+ *  Transfer event always also gets emitted. Leave cTokens state change to that event
  *  event.mintAmount is the underlying asset
  *  event.mintTokens is the amount of cTokens minted
  *  event.minter is the user
@@ -47,9 +47,13 @@ export function handleMint(event: Mint): void {
     .concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
   if (cTokenStats == null) {
-    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
-    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, event.params.minter.toHexString())
-  } 
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load
+    cTokenStats = createCTokenInfo(
+      cTokenStatsID,
+      market.symbol,
+      event.params.minter.toHexString(),
+    )
+  }
 
   let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
@@ -62,26 +66,25 @@ export function handleMint(event: Mint): void {
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let cTokenContract = CToken.bind(event.address)
-  // let underlyingBalance = contract.call('balanceOfUnderlying', [
-  //   EthereumValue.fromAddress(event.params.minter),
-  // ])
-  // cTokenStats.underlyingBalance = underlyingBalance[0]
-  //   .toBigInt()
-  //   .toBigDecimal()
-  //   .div(BigDecimal.fromString('1000000000000000000'))
-
-  // *** TODO DK - I added this, why was it missing in the first place? It was only in CETH. I
-  // really think it should be in both . Will double check this doesnt break when it is fully synced
-  cTokenStats.underlyingSupplied = cTokenStats.underlyingSupplied.plus(
+  // TODO - OPTIMIZE OUT THIS CONTRACT CALL, just take market.exchangeRate x cToken balance. NOTE - you will have to move it below the other contract call in here 
+  let underlyingBalance = cTokenContract.call('balanceOfUnderlying', [
+    EthereumValue.fromAddress(event.params.minter),
+  ])
+  cTokenStats.realizedLendBalance = underlyingBalance[0]
+    .toBigInt()
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1000000000000000000'))
+  cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied.plus(
     event.params.mintAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
   )
 
-  // cTokenStats.interestEarned = cTokenStats.underlyingBalance
-  //   .minus(cTokenStats.underlyingSupplied)
-  //   .plus(cTokenStats.underlyingRedeemed)
+  cTokenStats.realizedSupplyInterest = cTokenStats.realizedLendBalance
+    .minus(cTokenStats.totalUnderlyingSupplied)
+    .plus(cTokenStats.totalUnderlyingRedeemed)
 
+  // TODO - OPTIMIZE OUT THIS CONTRACT CALL, just ADD the previous, plus this value
   cTokenStats.cTokenBalance = cTokenContract
     .balanceOf(event.params.minter)
     .toBigDecimal()
@@ -89,9 +92,9 @@ export function handleMint(event: Mint): void {
   cTokenStats.save()
 
   /********** Liquidity Calculations Below **********/
-  if (user.hasBorrowed == true) {
-    calculateLiquidty(userID)
-  }
+  // if (user.hasBorrowed == true) {
+  //   calculateLiquidty(userID)
+  // }
 }
 
 /*  User supplies cTokens into market and receives underlying asset in exchange
@@ -111,11 +114,16 @@ export function handleRedeem(event: Redeem): void {
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   if (cTokenStats == null) {
-    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
-    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, event.params.redeemer.toHexString())
-  } 
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load
+    cTokenStats = createCTokenInfo(
+      cTokenStatsID,
+      market.symbol,
+      event.params.redeemer.toHexString(),
+    )
+  }
 
-  /********** User Updates Below **********/ let txHashes = cTokenStats.transactionHashes
+  /********** User Updates Below **********/
+  let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
   cTokenStats.transactionHashes = txHashes
   let txTimes = cTokenStats.transactionTimes
@@ -126,25 +134,25 @@ export function handleRedeem(event: Redeem): void {
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let cTokenContract = CToken.bind(event.address)
-  // let underlyingBalance = contract.call('balanceOfUnderlying', [
-  //   EthereumValue.fromAddress(event.params.redeemer),
-  // ])
-  // cTokenStats.underlyingBalance = underlyingBalance[0]
-  //   .toBigInt()
-  //   .toBigDecimal()
-  //   .div(BigDecimal.fromString('1000000000000000000'))
+  // TODO - OPTIMIZE OUT THIS CONTRACT CALL, just take market.exchangeRate x cToken balance. NOTE - you will have to move it below the other contract call in here 
+  let underlyingBalance = cTokenContract.call('balanceOfUnderlying', [
+    EthereumValue.fromAddress(event.params.redeemer),
+  ])
+  cTokenStats.realizedLendBalance = underlyingBalance[0]
+    .toBigInt()
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1000000000000000000'))
 
-  // *** TODO DK - I added this, why was it missing in the first place? It was only in CETH. I
-  // really think it should be in both . Will double check this doesnt break when it is fully synced
-  cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(
+  cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed.plus(
     event.params.redeemAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
   )
-  // cTokenStats.interestEarned = cTokenStats.underlyingBalance
-  //   .minus(cTokenStats.underlyingSupplied)
-  //   .plus(cTokenStats.underlyingRedeemed)
+  cTokenStats.realizedSupplyInterest = cTokenStats.realizedLendBalance
+    .minus(cTokenStats.totalUnderlyingSupplied)
+    .plus(cTokenStats.totalUnderlyingRedeemed)
 
+  // TODO - OPTIMIZE OUT THIS CONTRACT CALL, just ADD the previous, plus this value
   cTokenStats.cTokenBalance = cTokenContract
     .balanceOf(event.params.redeemer)
     .toBigDecimal()
@@ -163,9 +171,9 @@ export function handleRedeem(event: Redeem): void {
     user.hasBorrowed = false
     user.save()
   }
-  if (user.hasBorrowed == true) {
-    calculateLiquidty(userID)
-  }
+  // if (user.hasBorrowed == true) {
+  //   calculateLiquidty(userID)
+  // }
 }
 
 /* Borrow assets from the protocol
@@ -187,8 +195,12 @@ export function handleBorrow(event: Borrow): void {
 
   // this is needed, since you could lend in one asset and borrow in another
   if (cTokenStats == null) {
-      let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
-      cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, event.params.borrower.toHexString())
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load
+    cTokenStats = createCTokenInfo(
+      cTokenStatsID,
+      market.symbol,
+      event.params.borrower.toHexString(),
+    )
   }
 
   let txHashes = cTokenStats.transactionHashes
@@ -200,26 +212,34 @@ export function handleBorrow(event: Borrow): void {
   cTokenStats.accrualBlockNumber = event.block.number
 
   let cTokenContract = CToken.bind(event.address)
-  // let borrowBalance = contract.call('borrowBalanceCurrent', [
-  //   EthereumValue.fromAddress(event.params.borrower),
-  // ])
-  // cTokenStats.borrowBalance = borrowBalance[0]
-  //   .toBigInt()
-  //   .toBigDecimal()
-  //   .div(BigDecimal.fromString('1000000000000000000'))
-  cTokenStats.underlyingBorrowed = cTokenStats.underlyingBorrowed.plus(
+
+  // TODO - OPTIMIZE OUT THIS CONTRACT CALL, just take borrowBalance * borrowIndexLatest / userBorrowIndex
+  // NOTE - you will have to move it below the other contract call in here 
+  let borrowBalance = cTokenContract.call('borrowBalanceCurrent', [
+    EthereumValue.fromAddress(event.params.borrower),
+  ])
+  cTokenStats.realizedBorrowBalance = borrowBalance[0]
+    .toBigInt()
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1000000000000000000'))
+  cTokenStats.totalUnderlyingBorrowed = cTokenStats.totalUnderlyingBorrowed.plus(
     event.params.borrowAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
   )
-  // cTokenStats.borrowInterest = cTokenStats.borrowBalance
-  //   .minus(cTokenStats.totalBorrowed)
-  //   .plus(cTokenStats.totalRepaid)
-  cTokenStats.cTokenBalance = cTokenContract
-    .balanceOf(event.params.borrower)
-    .toBigDecimal()
-    .div(BigDecimal.fromString('100000000'))
-  cTokenStats.save()
+  cTokenStats.realizedBorrowInterest = cTokenStats.realizedBorrowBalance
+    .minus(cTokenStats.totalUnderlyingBorrowed)
+    .plus(cTokenStats.totalUnderlyingRepaid)
+
+  // TODO - remove this, cTkenBalance is not changed at all in borrowing
+  // cTokenStats.cTokenBalance = cTokenContract
+  //   .balanceOf(event.params.borrower)
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('100000000'))
+  // cTokenStats.save()
+
+  let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load
+  cTokenStats.userBorrowIndex = market.borrowIndex
 
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
@@ -265,26 +285,34 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.accrualBlockNumber = event.block.number
 
   let cTokenContract = CToken.bind(event.address)
-  // let borrowBalance = contract.call('borrowBalanceCurrent', [
-  //   EthereumValue.fromAddress(event.params.borrower),
-  // ])
-  // cTokenStats.borrowBalance = borrowBalance[0]
-  //   .toBigInt()
-  //   .toBigDecimal()
-  //   .div(BigDecimal.fromString('1000000000000000000'))
-  cTokenStats.underlyingRepaid = cTokenStats.underlyingRepaid.plus(
+  // TODO - OPTIMIZE OUT THIS CONTRACT CALL, just take borrowBalance * borrowIndexLatest / userBorrowIndex
+  // NOTE - you will have to move it below the other contract call in here 
+  let borrowBalance = cTokenContract.call('borrowBalanceCurrent', [
+    EthereumValue.fromAddress(event.params.borrower),
+  ])
+  cTokenStats.realizedBorrowBalance = borrowBalance[0]
+    .toBigInt()
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1000000000000000000')
+    )
+  cTokenStats.totalUnderlyingRepaid = cTokenStats.totalUnderlyingRepaid.plus(
     event.params.repayAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
   )
-  // cTokenStats.borrowInterest = cTokenStats.borrowBalance
-  //   .minus(cTokenStats.totalBorrowed)
-  //   .plus(cTokenStats.totalRepaid)
-  cTokenStats.cTokenBalance = cTokenContract
-    .balanceOf(event.params.borrower)
-    .toBigDecimal()
-    .div(BigDecimal.fromString('100000000'))
-  cTokenStats.save()
+  cTokenStats.realizedBorrowInterest = cTokenStats.realizedBorrowBalance
+    .minus(cTokenStats.totalUnderlyingBorrowed)
+    .plus(cTokenStats.totalUnderlyingRepaid)
+
+  // TODO - remove this, cTkenBalance is not changed at all in borrowing
+  // cTokenStats.cTokenBalance = cTokenContract
+  //   .balanceOf(event.params.borrower)
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('100000000'))
+  // cTokenStats.save()
+
+  let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load
+  cTokenStats.userBorrowIndex = market.borrowIndex
 
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
@@ -298,9 +326,9 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     user.hasBorrowed = false
     user.save()
   }
-  if (user.hasBorrowed == true) {
-    calculateLiquidty(userID)
-  }
+  // if (user.hasBorrowed == true) {
+  //   calculateLiquidty(userID)
+  // }
 }
 
 /*
@@ -352,7 +380,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   // note - no liquidity calculations needed here. They are handled in Transfer event
   // which is always triggered by a liquidation
 }
-
+// TODO - optimize this funciton, it makes SO many contract calls
 /* Possible ways to emit Transfer:
  *    seize() - i.e. a Liquidation Transfer
  *    redeemFresh() - i.e. redeeming your cTokens for underlying asset
@@ -361,24 +389,29 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
  * This function handles all 4 cases, since duplicate data is emitted in the back-to-back transfer
  * The simplest way to do this is call getAccountSnapshot, in here, and leave out any cTokenBalance
  * calculations in the other function. This way we never add or subtract and deviate from the true
- * value store in the smart contract
+ * value stored in the smart contract
+ * 
+ * event.params.from = sender of cTokens
+ * event.params.to = receiver of cTokens
+ * event.params.amount = amount sent
  */
 export function handleTransfer(event: Transfer): void {
   /********** Market Updates Below **********/
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
-  let contract = CToken.bind(event.address)
+  let cTokenContract = CToken.bind(event.address)
 
   // Since transfer does not effect any coins or cTokens, it just transfers cTokens, we only update
   // market values that are dependant on the block delta
-  market.borrowIndex = contract.borrowIndex().toBigDecimal()
+  // TODO - this is wrong, other values ar then derived from these four values, such as totalBorrows. fix
+  market.borrowIndex = cTokenContract.borrowIndex().toBigDecimal()
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
-  market.perBlockBorrowInterest = contract
+  market.perBlockBorrowInterest = cTokenContract
     .borrowRatePerBlock()
     .toBigDecimal()
     .div(BigDecimal.fromString('1000000000000000000'))
-  market.perBlockSupplyInterest = contract
+  market.perBlockSupplyInterest = cTokenContract
     .supplyRatePerBlock()
     .toBigDecimal()
     .div(BigDecimal.fromString('1000000000000000000'))
@@ -386,7 +419,7 @@ export function handleTransfer(event: Transfer): void {
   market.save()
 
   // Calculate the exchange rate and amount of underlying being transferred
-  let exchangeRate = contract
+  let exchangeRate = cTokenContract
     .exchangeRateStored()
     .toBigDecimal()
     .div(BigDecimal.fromString('1000000000000000000'))
@@ -406,30 +439,29 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsFrom.transactionTimes = txTimesFrom
   cTokenStatsFrom.accrualBlockNumber = event.block.number
 
-  let accountSnapshotFrom = contract.getAccountSnapshot(event.params.from)
+  // TODO - Optimize, just minus the tokens 
+  let accountSnapshotFrom = cTokenContract.getAccountSnapshot(event.params.from)
   cTokenStatsFrom.cTokenBalance = accountSnapshotFrom.value1
     .toBigDecimal()
-    .div(BigDecimal.fromString('100000000'))
-  // cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2
-  //   .toBigDecimal()
-  // might as well update this, as it depends on block number
-  //   .div(BigDecimal.fromString('1000000000000000000'))
+    .div(BigDecimal.fromString('100000000')
+  )
 
-  // let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [
-  //   EthereumValue.fromAddress(event.params.from),
-  // ])
-
-  /// TODO DK - this was only in CERC20, not CETH, need to make sure this doesnt break it
-  cTokenStatsFrom.underlyingRedeemed = cTokenStatsFrom.underlyingRedeemed.minus(
+  
+  // TODO - Optimize, just multiply with markets new exchange rate
+  let underlyingBalanceFrom = cTokenContract.call('balanceOfUnderlying', [
+    EthereumValue.fromAddress(event.params.from),
+  ])
+  cTokenStatsFrom.realizedLendBalance = underlyingBalanceFrom[0]
+    .toBigInt()
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1000000000000000000'))
+  cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
     amountUnderlying,
   )
-  // cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0]
-  //   .toBigInt()
-  //   .toBigDecimal()
-  //   .div(BigDecimal.fromString('1000000000000000000'))
-  // cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance
-  //   .minus(cTokenStatsFrom.underlyingSupplied)
-  //   .plus(cTokenStatsFrom.underlyingRedeemed)
+  cTokenStatsFrom.realizedSupplyInterest = cTokenStatsFrom.realizedLendBalance
+    .minus(cTokenStatsFrom.totalUnderlyingSupplied)
+    .plus(cTokenStatsFrom.totalUnderlyingRedeemed)
+
   cTokenStatsFrom.save()
 
   /********** User To Updates Below **********/
@@ -450,9 +482,13 @@ export function handleTransfer(event: Transfer): void {
   let cTokenStatsToID = market.id.concat('-').concat(userToID)
   let cTokenStatsTo = CTokenInfo.load(cTokenStatsToID)
   if (cTokenStatsTo == null) {
-    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
-    cTokenStatsTo = createCTokenInfo(cTokenStatsToID, market.symbol, event.params.to.toHexString())
-  } 
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load
+    cTokenStatsTo = createCTokenInfo(
+      cTokenStatsToID,
+      market.symbol,
+      event.params.to.toHexString(),
+    )
+  }
 
   let txHashesTo = cTokenStatsTo.transactionHashes
   txHashesTo.push(event.transaction.hash)
@@ -462,33 +498,32 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.transactionTimes = txTimesTo
   cTokenStatsTo.accrualBlockNumber = event.block.number
 
-  let accountSnapshotTo = contract.getAccountSnapshot(event.params.to)
+  // TODO - Optimize, just add the tokens 
+  let accountSnapshotTo = cTokenContract.getAccountSnapshot(event.params.to)
   cTokenStatsTo.cTokenBalance = accountSnapshotTo.value1
     .toBigDecimal()
     .div(BigDecimal.fromString('100000000'))
-  // cTokenStatsTo.borrowBalance = accountSnapshotTo.value2
-  //   .toBigDecimal()
-  // might as well update this, as it depends on block number
-  //   .div(BigDecimal.fromString('1000000000000000000'))
 
-  // let underlyingBalanceTo = contract.call('balanceOfUnderlying', [
-  //   EthereumValue.fromAddress(event.params.to),
-  // ])
-  // cTokenStatsTo.underlyingBalance = underlyingBalanceTo[0]
-  //   .toBigInt()
-  //   .toBigDecimal()
-  //   .div(BigDecimal.fromString('1000000000000000000'))
-  // TODO DK TODAY - this below only in CERC20, not CETH, need to make sure this doesnt break it
-  cTokenStatsTo.underlyingSupplied = cTokenStatsTo.underlyingSupplied.plus(
+  // TODO - Optimize, just multiply with markets new exchange rate
+  let underlyingBalanceTo = cTokenContract.call('balanceOfUnderlying', [
+    EthereumValue.fromAddress(event.params.to),
+  ])
+  cTokenStatsTo.realizedLendBalance = underlyingBalanceTo[0]
+    .toBigInt()
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1000000000000000000'))
+
+  cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
     amountUnderlying,
   )
-  // cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance
-  //   .minus(cTokenStatsTo.underlyingSupplied)
-  //   .plus(cTokenStatsTo.underlyingRedeemed)
+  cTokenStatsTo.realizedSupplyInterest = cTokenStatsTo.realizedLendBalance
+    .minus(cTokenStatsTo.totalUnderlyingSupplied)
+    .plus(cTokenStatsTo.totalUnderlyingRedeemed)
   cTokenStatsTo.save()
 
-  /********** Liquidation Updates Below **********/
+  /********** Liquidity Updates Below **********/
   let userFromID = event.params.from.toHex()
+  // TODO - hmm, this seems impossible to happen, should i still keep it? i remember an edge case liek this from the past 
   let userFrom = User.load(userFromID)
   if (userFrom == null) {
     userFrom = new User(userFromID)
@@ -500,10 +535,10 @@ export function handleTransfer(event: Transfer): void {
     userFrom.hasBorrowed = false
     userFrom.save()
   }
-  if (userFrom.hasBorrowed == true) {
-    calculateLiquidty(userFromID)
-  }
-  calculateLiquidty(userToID)
+  // if (userFrom.hasBorrowed == true) {
+  //   calculateLiquidty(userFromID)
+  // }
+  // calculateLiquidty(userToID)
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {

@@ -74,14 +74,25 @@ export function handleMint(event: Mint): void {
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let cTokenContract = CToken.bind(event.address)
-  // let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.minter)])
-  // cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let underlyingBalance = contract.call('balanceOfUnderlying', [
+  //   EthereumValue.fromAddress(event.params.minter),
+  // ])
+  // cTokenStats.underlyingBalance = underlyingBalance[0]
+  //   .toBigInt()
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('1000000000000000000'))
+
+  // *** TODO DK - I added this, why was it missing in the first place? It was only in CETH. I
+  // really think it should be in both . Will double check this doesnt break when it is fully synced
   cTokenStats.underlyingSupplied = cTokenStats.underlyingSupplied.plus(
     event.params.mintAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
-  ) // *** TODO DK TODAY - I added this, why was it missing in the first place? It was only in CETH. I really think it should be in both . Will double check this doesnt break when it is fully synced
-  // cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
+  )
+
+  // cTokenStats.interestEarned = cTokenStats.underlyingBalance
+  //   .minus(cTokenStats.underlyingSupplied)
+  //   .plus(cTokenStats.underlyingRedeemed)
 
   cTokenStats.cTokenBalance = cTokenContract
     .balanceOf(event.params.minter)
@@ -140,14 +151,25 @@ export function handleRedeem(event: Redeem): void {
   // We use low level call here, since the function is not a view function.
   // However, it still works, but gives the stored state of the most recent block update
   let cTokenContract = CToken.bind(event.address)
-  // let underlyingBalance = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.redeemer)])
-  // cTokenStats.underlyingBalance = underlyingBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let underlyingBalance = contract.call('balanceOfUnderlying', [
+  //   EthereumValue.fromAddress(event.params.redeemer),
+  // ])
+  // cTokenStats.underlyingBalance = underlyingBalance[0]
+  //   .toBigInt()
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('1000000000000000000'))
+
+  // *** TODO DK - I added this, why was it missing in the first place? It was only in CETH. I
+  // really think it should be in both . Will double check this doesnt break when it is fully synced
   cTokenStats.underlyingRedeemed = cTokenStats.underlyingRedeemed.plus(
     event.params.redeemAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
-  ) //  *** TODO DK TODAY - I added this, why was it missing in the first place? It was only in CETH. I really think it should be in both . Will double check this doesnt break when it is fully synced
-  // cTokenStats.interestEarned = cTokenStats.underlyingBalance.minus(cTokenStats.underlyingSupplied).plus(cTokenStats.underlyingRedeemed)
+  )
+  // cTokenStats.interestEarned = cTokenStats.underlyingBalance
+  //   .minus(cTokenStats.underlyingSupplied)
+  //   .plus(cTokenStats.underlyingRedeemed)
+
   cTokenStats.cTokenBalance = cTokenContract
     .balanceOf(event.params.redeemer)
     .toBigDecimal()
@@ -216,14 +238,21 @@ export function handleBorrow(event: Borrow): void {
   cTokenStats.accrualBlockNumber = event.block.number
 
   let cTokenContract = CToken.bind(event.address)
-  // let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  // cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let borrowBalance = contract.call('borrowBalanceCurrent', [
+  //   EthereumValue.fromAddress(event.params.borrower),
+  // ])
+  // cTokenStats.borrowBalance = borrowBalance[0]
+  //   .toBigInt()
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('1000000000000000000'))
   cTokenStats.totalBorrowed = cTokenStats.totalBorrowed.plus(
     event.params.borrowAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
   )
-  // cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
+  // cTokenStats.borrowInterest = cTokenStats.borrowBalance
+  //   .minus(cTokenStats.totalBorrowed)
+  //   .plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = cTokenContract
     .balanceOf(event.params.borrower)
     .toBigDecimal()
@@ -274,14 +303,21 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.accrualBlockNumber = event.block.number
 
   let cTokenContract = CToken.bind(event.address)
-  // let borrowBalance = contract.call('borrowBalanceCurrent', [EthereumValue.fromAddress(event.params.borrower)])
-  // cTokenStats.borrowBalance = borrowBalance[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
+  // let borrowBalance = contract.call('borrowBalanceCurrent', [
+  //   EthereumValue.fromAddress(event.params.borrower),
+  // ])
+  // cTokenStats.borrowBalance = borrowBalance[0]
+  //   .toBigInt()
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('1000000000000000000'))
   cTokenStats.totalRepaid = cTokenStats.totalRepaid.plus(
     event.params.repayAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
   )
-  // cTokenStats.borrowInterest = cTokenStats.borrowBalance.minus(cTokenStats.totalBorrowed).plus(cTokenStats.totalRepaid)
+  // cTokenStats.borrowInterest = cTokenStats.borrowBalance
+  //   .minus(cTokenStats.totalBorrowed)
+  //   .plus(cTokenStats.totalRepaid)
   cTokenStats.cTokenBalance = cTokenContract
     .balanceOf(event.params.borrower)
     .toBigDecimal()
@@ -360,7 +396,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
  *    redeemFresh() - i.e. redeeming your cTokens for underlying asset
  *    mintFresh() - i.e. you are lending underlying assets to create ctokens
  *    transfer() - i.e. a basic transfer
- * This function must handle all 4 cases, since duplicate data is emitted in the back-to-back transfer
+ * This function handles all 4 cases, since duplicate data is emitted in the back-to-back transfer
  * The simplest way to do this is call getAccountSnapshot, in here, and leave out any cTokenBalance
  * calculations in the other function. This way we never add or subtract and deviate from the true
  * value store in the smart contract
@@ -394,7 +430,8 @@ export function handleTransfer(event: Transfer): void {
     .div(BigDecimal.fromString('1000000000000000000'))
   let amountUnderlying = exchangeRate.times(event.params.amount.toBigDecimal())
 
-  ///  *** TODO DK TODAY - the two above was only in CERC20, not CETH, need to make sure this doesnt break it
+  // TODO DK TODAY - the two above was only in CERC20, not CETH,
+  // need to make sure this doesnt break it
 
   let cTokenStatsFromID = market.id.concat('-').concat(event.params.from.toHex())
   let cTokenStatsFrom = CTokenInfo.load(cTokenStatsFromID)
@@ -411,18 +448,30 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsFrom.cTokenBalance = accountSnapshotFrom.value1
     .toBigDecimal()
     .div(BigDecimal.fromString('100000000'))
-  // cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
+  // cTokenStatsFrom.borrowBalance = accountSnapshotFrom.value2
+  //   .toBigDecimal()
+  // might as well update this, as it depends on block number
+  //   .div(BigDecimal.fromString('1000000000000000000'))
 
-  // let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.from)])
+  // let underlyingBalanceFrom = contract.call('balanceOfUnderlying', [
+  //   EthereumValue.fromAddress(event.params.from),
+  // ])
+
+  /// TODO DK - this was only in CERC20, not CETH, need to make sure this doesnt break it
   cTokenStatsFrom.underlyingRedeemed = cTokenStatsFrom.underlyingRedeemed.minus(
     amountUnderlying,
-  ) ///  *** TODO DK TODAY - this was only in CERC20, not CETH, need to make sure this doesnt break it
-  // cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  // cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance.minus(cTokenStatsFrom.underlyingSupplied).plus(cTokenStatsFrom.underlyingRedeemed)
+  )
+  // cTokenStatsFrom.underlyingBalance = underlyingBalanceFrom[0]
+  //   .toBigInt()
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('1000000000000000000'))
+  // cTokenStatsFrom.interestEarned = cTokenStatsFrom.underlyingBalance
+  //   .minus(cTokenStatsFrom.underlyingSupplied)
+  //   .plus(cTokenStatsFrom.underlyingRedeemed)
   cTokenStatsFrom.save()
 
   /********** User To Updates Below **********/
-  // We do the same for userTo as we did for userFrom, but check if user and cTokenStats entities are null
+  // We do the same for userTo as userFrom, but check if user and cTokenStats entities are null
   let userToID = event.params.to.toHex()
   let userTo = User.load(userToID)
   if (userTo == null) {
@@ -467,15 +516,25 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.cTokenBalance = accountSnapshotTo.value1
     .toBigDecimal()
     .div(BigDecimal.fromString('100000000'))
-  // cTokenStatsTo.borrowBalance = accountSnapshotTo.value2.toBigDecimal().div(BigDecimal.fromString("1000000000000000000")) // might as well update this, as it depends on block number
+  // cTokenStatsTo.borrowBalance = accountSnapshotTo.value2
+  //   .toBigDecimal()
+  // might as well update this, as it depends on block number
+  //   .div(BigDecimal.fromString('1000000000000000000'))
 
-  // let underlyingBalanceTo = contract.call('balanceOfUnderlying', [EthereumValue.fromAddress(event.params.to)])
-  // cTokenStatsTo.underlyingBalance = underlyingBalanceTo [0].toBigInt().toBigDecimal().div(BigDecimal.fromString("1000000000000000000"))
-  ///  *** TODO DK TODAY - this below only in CERC20, not CETH, need to make sure this doesnt break it
+  // let underlyingBalanceTo = contract.call('balanceOfUnderlying', [
+  //   EthereumValue.fromAddress(event.params.to),
+  // ])
+  // cTokenStatsTo.underlyingBalance = underlyingBalanceTo[0]
+  //   .toBigInt()
+  //   .toBigDecimal()
+  //   .div(BigDecimal.fromString('1000000000000000000'))
+  // TODO DK TODAY - this below only in CERC20, not CETH, need to make sure this doesnt break it
   cTokenStatsTo.underlyingSupplied = cTokenStatsTo.underlyingSupplied.plus(
     amountUnderlying,
   )
-  // cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance.minus(cTokenStatsTo.underlyingSupplied).plus(cTokenStatsTo.underlyingRedeemed)
+  // cTokenStatsTo.interestEarned = cTokenStatsTo.underlyingBalance
+  //   .minus(cTokenStatsTo.underlyingSupplied)
+  //   .plus(cTokenStatsTo.underlyingRedeemed)
   cTokenStatsTo.save()
 
   /********** Liquidation Updates Below **********/

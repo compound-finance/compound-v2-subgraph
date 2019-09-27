@@ -183,7 +183,8 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
     .toBigDecimal()
     .div(BigDecimal.fromString('100000000'))
 
-  // 10^28, removing 10^18 for exp precision, and then token precision / ctoken precision -> 10^18/10^8 = 10^10
+  // 10^28, removing 10^18 for exp precision, and then
+  // token precision / ctoken precision -> 10^18/10^8 = 10^10
   market.exchangeRate = contract
     .exchangeRateStored()
     .toBigDecimal()
@@ -207,7 +208,10 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
     .borrowRatePerBlock()
     .toBigDecimal()
     .div(BigDecimal.fromString('1000000000000000000'))
-  let testing = contract.try_supplyRatePerBlock() //TODO make this more robust. technically if it fails, we can calculate on our side the value , since supply rate is a derivative of borrow
+
+  // TODO make the below more robust. technically if it fails, we can calculate
+  //  on our side the value , since supply rate is a derivative of borrow
+  let testing = contract.try_supplyRatePerBlock()
   if (testing.reverted) {
     log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])
   } else {
@@ -289,7 +293,12 @@ export function calculateLiquidty(userAddr: string): void {
   //   user.availableToBorrowEth = null
   // } else {
   //   user.accountLiquidity = truncateBigDecimal(totalSupplyInEth.div(totalBorrowInEth), 18)
-  //   user.availableToBorrowEth = truncateBigDecimal(user.totalSupplyInEth.div(BigDecimal.fromString("1.5")).minus(user.totalBorrowInEth), 18)
+  //   user.availableToBorrowEth = truncateBigDecimal(
+  //     user.totalSupplyInEth
+  //       .div(BigDecimal.fromString('1.5'))
+  //       .minus(user.totalBorrowInEth),
+  //     18,
+  //   )
   // }
   // user.save()
 }

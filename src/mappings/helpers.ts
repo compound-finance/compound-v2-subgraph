@@ -229,6 +229,31 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
   market.save()
 }
 
+export function createCTokenInfo(cTokenStatsID: string, symbol: string, user: string): CTokenInfo {
+  let cTokenStats = new CTokenInfo(cTokenStatsID)
+  cTokenStats.symbol = symbol
+  cTokenStats.user = user
+  cTokenStats.transactionHashes = []
+  cTokenStats.transactionTimes = []
+  cTokenStats.accrualBlockNumber = BigInt.fromI32(0)
+  cTokenStats.cTokenBalance = BigDecimal.fromString('0')
+  cTokenStats.underlyingSupplied = BigDecimal.fromString('0')
+  cTokenStats.underlyingRedeemed = BigDecimal.fromString('0')
+  cTokenStats.userBorrowIndex = BigDecimal.fromString('0')
+  cTokenStats.underlyingBorrowed = BigDecimal.fromString('0')
+  cTokenStats.underlyingRepaid = BigDecimal.fromString('0')
+  cTokenStats.realizedLendBalance = BigDecimal.fromString('0')
+  cTokenStats.realizedSupplyInterest = BigDecimal.fromString('0')
+  cTokenStats.realizedBorrowBalance = BigDecimal.fromString('0')
+  cTokenStats.realizedBorrowInterest = BigDecimal.fromString('0')
+  cTokenStats.unrealizedLendBalance = BigDecimal.fromString('0')
+  cTokenStats.unrealizedSupplyInterest = BigDecimal.fromString('0')
+  cTokenStats.unrealizedBorrowBalance = BigDecimal.fromString('0')
+  cTokenStats.unrealizedBorrowInterest = BigDecimal.fromString('0')
+  return cTokenStats
+}
+
+
 export function calculateLiquidty(userAddr: string): void {
   // let totalSupplyInEth = BigDecimal.fromString("0")
   // let totalBorrowInEth = BigDecimal.fromString("0")

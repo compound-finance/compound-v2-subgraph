@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
-import { log, BigDecimal } from '@graphprotocol/graph-ts'
+import { log, BigDecimal, BigInt } from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -15,7 +15,7 @@ import {
 
 import { Market, User, CTokenInfo } from '../types/schema'
 
-import { calculateLiquidty, updateMarket } from './helpers'
+import { calculateLiquidty, updateMarket, createCTokenInfo } from './helpers'
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Note - Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -47,22 +47,9 @@ export function handleMint(event: Mint): void {
     .concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
   if (cTokenStats == null) {
-    cTokenStats = new CTokenInfo(cTokenStatsID)
-    cTokenStats.user = event.params.minter.toHexString()
-    cTokenStats.transactionHashes = []
-    cTokenStats.transactionTimes = []
-    cTokenStats.underlyingSupplied = BigDecimal.fromString('0')
-    cTokenStats.underlyingRedeemed = BigDecimal.fromString('0')
-    // cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
-    // cTokenStats.interestEarned =  BigDecimal.fromString("0")
-    cTokenStats.cTokenBalance = BigDecimal.fromString('0')
-    cTokenStats.totalBorrowed = BigDecimal.fromString('0')
-    cTokenStats.totalRepaid = BigDecimal.fromString('0')
-    // cTokenStats.borrowBalance = BigDecimal.fromString("0")
-    // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
-    let market = Market.load(event.address.toHexString())
-    cTokenStats.symbol = market.symbol
-  }
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
+    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, event.params.minter.toHexString())
+  } 
 
   let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
@@ -124,22 +111,9 @@ export function handleRedeem(event: Redeem): void {
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
 
   if (cTokenStats == null) {
-    cTokenStats = new CTokenInfo(cTokenStatsID)
-    cTokenStats.user = event.params.redeemer.toHexString()
-    cTokenStats.transactionHashes = []
-    cTokenStats.transactionTimes = []
-    cTokenStats.underlyingSupplied = BigDecimal.fromString('0')
-    cTokenStats.underlyingRedeemed = BigDecimal.fromString('0')
-    // cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
-    // cTokenStats.interestEarned =  BigDecimal.fromString("0")
-    cTokenStats.cTokenBalance = BigDecimal.fromString('0')
-    cTokenStats.totalBorrowed = BigDecimal.fromString('0')
-    cTokenStats.totalRepaid = BigDecimal.fromString('0')
-    // cTokenStats.borrowBalance = BigDecimal.fromString("0")
-    // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
-    let market = Market.load(event.address.toHexString())
-    cTokenStats.symbol = market.symbol
-  } //
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
+    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, event.params.redeemer.toHexString())
+  } 
 
   /********** User Updates Below **********/ let txHashes = cTokenStats.transactionHashes
   txHashes.push(event.transaction.hash)
@@ -213,21 +187,8 @@ export function handleBorrow(event: Borrow): void {
 
   // this is needed, since you could lend in one asset and borrow in another
   if (cTokenStats == null) {
-    cTokenStats = new CTokenInfo(cTokenStatsID)
-    cTokenStats.user = event.params.borrower.toHexString()
-    cTokenStats.transactionHashes = []
-    cTokenStats.transactionTimes = []
-    cTokenStats.underlyingSupplied = BigDecimal.fromString('0')
-    cTokenStats.underlyingRedeemed = BigDecimal.fromString('0')
-    // cTokenStats.underlyingBalance =  BigDecimal.fromString("0")
-    // cTokenStats.interestEarned =  BigDecimal.fromString("0")
-    cTokenStats.cTokenBalance = BigDecimal.fromString('0')
-    cTokenStats.totalBorrowed = BigDecimal.fromString('0')
-    cTokenStats.totalRepaid = BigDecimal.fromString('0')
-    // cTokenStats.borrowBalance = BigDecimal.fromString("0")
-    // cTokenStats.borrowInterest =  BigDecimal.fromString("0")
-    let market = Market.load(event.address.toHexString())
-    cTokenStats.symbol = market.symbol
+      let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
+      cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, event.params.borrower.toHexString())
   }
 
   let txHashes = cTokenStats.transactionHashes
@@ -246,7 +207,7 @@ export function handleBorrow(event: Borrow): void {
   //   .toBigInt()
   //   .toBigDecimal()
   //   .div(BigDecimal.fromString('1000000000000000000'))
-  cTokenStats.totalBorrowed = cTokenStats.totalBorrowed.plus(
+  cTokenStats.underlyingBorrowed = cTokenStats.underlyingBorrowed.plus(
     event.params.borrowAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
@@ -311,7 +272,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   //   .toBigInt()
   //   .toBigDecimal()
   //   .div(BigDecimal.fromString('1000000000000000000'))
-  cTokenStats.totalRepaid = cTokenStats.totalRepaid.plus(
+  cTokenStats.underlyingRepaid = cTokenStats.underlyingRepaid.plus(
     event.params.repayAmount
       .toBigDecimal()
       .div(BigDecimal.fromString('1000000000000000000')),
@@ -489,21 +450,9 @@ export function handleTransfer(event: Transfer): void {
   let cTokenStatsToID = market.id.concat('-').concat(userToID)
   let cTokenStatsTo = CTokenInfo.load(cTokenStatsToID)
   if (cTokenStatsTo == null) {
-    cTokenStatsTo = new CTokenInfo(cTokenStatsToID)
-    cTokenStatsTo.user = event.params.to.toHexString()
-    cTokenStatsTo.symbol = market.symbol
-    cTokenStatsTo.transactionHashes = []
-    cTokenStatsTo.transactionTimes = []
-    cTokenStatsTo.underlyingSupplied = BigDecimal.fromString('0')
-    cTokenStatsTo.underlyingRedeemed = BigDecimal.fromString('0')
-    // cTokenStatsTo.underlyingBalance =  BigDecimal.fromString("0")
-    // cTokenStatsTo.interestEarned =  BigDecimal.fromString("0")
-    cTokenStatsTo.cTokenBalance = BigDecimal.fromString('0')
-    cTokenStatsTo.totalBorrowed = BigDecimal.fromString('0')
-    cTokenStatsTo.totalRepaid = BigDecimal.fromString('0')
-    // cTokenStatsTo.borrowBalance = BigDecimal.fromString("0")
-    // cTokenStatsTo.borrowInterest =  BigDecimal.fromString("0")
-  }
+    let market = Market.load(event.address.toHexString()) // TODO, if we return market from updateMarket, this could be one less load 
+    cTokenStatsTo = createCTokenInfo(cTokenStatsToID, market.symbol, event.params.to.toHexString())
+  } 
 
   let txHashesTo = cTokenStatsTo.transactionHashes
   txHashesTo.push(event.transaction.hash)

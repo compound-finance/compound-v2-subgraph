@@ -10,6 +10,7 @@ import {
   Transfer,
   AccrueInterest,
   CToken,
+  NewReserveFactor
 } from '../types/cREP/CToken'
 
 import { Market, User, CTokenInfo } from '../types/schema'
@@ -558,4 +559,11 @@ export function handleTransfer(event: Transfer): void {
 
 export function handleAccrueInterest(event: AccrueInterest): void {
   updateMarket(event.address, event.block.number.toI32())
+}
+
+export function handleNewReserveFactor(event: NewReserveFactor): void {
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  market.reserveFactor = event.params.newReserveFactorMantissa
+  market.save()
 }

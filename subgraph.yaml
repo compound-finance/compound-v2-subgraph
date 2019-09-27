@@ -41,6 +41,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: cDAI
     network: mainnet
@@ -78,6 +80,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: cETH
     network: mainnet
@@ -113,6 +117,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: cREP
     network: mainnet
@@ -150,6 +156,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: cUSDC
     network: mainnet
@@ -187,6 +195,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: cWBTC
     network: mainnet
@@ -224,6 +234,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: cZRX
     network: mainnet
@@ -261,6 +273,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: NewReserveFactor(uint256,uint256)
+          handler: handleNewReserveFactor
   - kind: ethereum/contract
     name: Comptroller
     network: mainnet

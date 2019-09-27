@@ -610,5 +610,23 @@
     "name": "Approval",
     "type": "event",
     "signature": "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "oldReserveFactorMantissa",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "newReserveFactorMantissa",
+        "type": "uint256"
+      }
+    ],
+    "name": "NewReserveFactor",
+    "type": "event",
+    "signature": "0xaaa68312e2ea9d50e16af5068410ab56e1a1fd06037b1a35664812c30f821460"
   }
 ]

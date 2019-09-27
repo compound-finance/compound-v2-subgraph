@@ -154,6 +154,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
         '0x0000000000000000000000000000000000000000',
       )
       market.underlyingDecimals = 18
+      market.reserveFactor = BigInt.fromI32(0)
     }
     tokenPrices = getEthUsdPrice(blockNumber)
 
@@ -166,6 +167,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
       market.underlyingAddress = contract.underlying()
       let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
       market.underlyingDecimals = underlyingContract.decimals()
+      market.reserveFactor = BigInt.fromI32(0)
     }
     tokenPrices = getTokenPrices(
       blockNumber,

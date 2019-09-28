@@ -15,7 +15,7 @@ import {
 
 import { Market, User, CTokenInfo } from '../types/schema'
 
-import { calculateLiquidty, updateMarket, createCTokenInfo } from './helpers'
+import { calculateLiquidty, updateMarket, createCTokenInfo, createUser } from './helpers'
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -31,14 +31,7 @@ export function handleMint(event: Mint): void {
   let userID = event.params.minter.toHex()
   let user = User.load(userID)
   if (user == null) {
-    user = new User(userID)
-    user.cTokens = []
-    user.countLiquidated = 0
-    user.countLiquidator = 0
-    user.totalBorrowInEth = BigDecimal.fromString('0')
-    user.totalSupplyInEth = BigDecimal.fromString('0')
-    user.hasBorrowed = false
-    user.save()
+    user = createUser(userID)
   }
 
   let cTokenStatsID = event.address
@@ -142,14 +135,7 @@ export function handleRedeem(event: Redeem): void {
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   if (user == null) {
-    user = new User(userID)
-    user.cTokens = []
-    user.countLiquidated = 0
-    user.countLiquidator = 0
-    user.totalBorrowInEth = BigDecimal.fromString('0')
-    user.totalSupplyInEth = BigDecimal.fromString('0')
-    user.hasBorrowed = false
-    user.save()
+    createUser(userID)
   }
   // if (user.hasBorrowed == true) {
   //   calculateLiquidty(userID)
@@ -209,14 +195,7 @@ export function handleBorrow(event: Borrow): void {
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   if (user == null) {
-    user = new User(userID)
-    user.cTokens = []
-    user.countLiquidated = 0
-    user.countLiquidator = 0
-    user.totalBorrowInEth = BigDecimal.fromString('0')
-    user.totalSupplyInEth = BigDecimal.fromString('0')
-    user.hasBorrowed = false
-    user.save()
+    user = createUser(userID)
   }
   user.hasBorrowed = true
   user.save()
@@ -269,14 +248,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   if (user == null) {
-    user = new User(userID)
-    user.cTokens = []
-    user.countLiquidated = 0
-    user.countLiquidator = 0
-    user.totalBorrowInEth = BigDecimal.fromString('0')
-    user.totalSupplyInEth = BigDecimal.fromString('0')
-    user.hasBorrowed = false
-    user.save()
+    createUser(userID)
   }
   // if (user.hasBorrowed == true) {
   //   calculateLiquidty(userID)
@@ -299,17 +271,10 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   updateMarket(event.address, event.block.number.toI32())
 
-  /********** User Updates Below **********/
   let liquidatorID = event.params.liquidator.toHex()
   let liquidator = User.load(liquidatorID)
   if (liquidator == null) {
-    liquidator = new User(liquidatorID)
-    liquidator.countLiquidated = 0
-    liquidator.countLiquidator = 0
-    liquidator.cTokens = []
-    liquidator.totalBorrowInEth = BigDecimal.fromString('0')
-    liquidator.totalSupplyInEth = BigDecimal.fromString('0')
-    liquidator.hasBorrowed = false
+    liquidator = createUser(liquidatorID)
   }
   liquidator.countLiquidator = liquidator.countLiquidator + 1
   liquidator.save()
@@ -317,20 +282,10 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   let borrowerID = event.params.borrower.toHex()
   let borrower = User.load(borrowerID)
   if (borrower == null) {
-    borrower = new User(borrowerID)
-    borrower.cTokens = []
-    borrower.countLiquidated = 0
-    borrower.countLiquidator = 0
-    borrower.totalBorrowInEth = BigDecimal.fromString('0')
-    borrower.totalSupplyInEth = BigDecimal.fromString('0')
-    borrower.hasBorrowed = false
-    borrower.save()
+    borrower = createUser(borrowerID)
   }
   borrower.countLiquidated = borrower.countLiquidated + 1
   borrower.save()
-
-  // note - no liquidity calculations needed here. They are handled in Transfer event
-  // which is always triggered by a liquidation
 }
 
 /* Possible ways to emit Transfer:
@@ -386,14 +341,7 @@ export function handleTransfer(event: Transfer): void {
   let userToID = event.params.to.toHex()
   let userTo = User.load(userToID)
   if (userTo == null) {
-    userTo = new User(userToID)
-    userTo.cTokens = []
-    userTo.countLiquidated = 0
-    userTo.countLiquidator = 0
-    userTo.totalBorrowInEth = BigDecimal.fromString('0')
-    userTo.totalSupplyInEth = BigDecimal.fromString('0')
-    userTo.hasBorrowed = false
-    userTo.save()
+    createUser(userToID)
   }
 
   let cTokenStatsToID = market.id.concat('-').concat(userToID)
@@ -433,18 +381,11 @@ export function handleTransfer(event: Transfer): void {
   cTokenStatsTo.save()
 
   /********** Liquidity Updates Below **********/
-  let userFromID = event.params.from.toHex()
   // TODO - hmm, this seems impossible to happen, should i still keep it? i remember an edge case liek this from the past
+  let userFromID = event.params.from.toHex()
   let userFrom = User.load(userFromID)
   if (userFrom == null) {
-    userFrom = new User(userFromID)
-    userFrom.cTokens = []
-    userFrom.countLiquidated = 0
-    userFrom.countLiquidator = 0
-    userFrom.totalBorrowInEth = BigDecimal.fromString('0')
-    userFrom.totalSupplyInEth = BigDecimal.fromString('0')
-    userFrom.hasBorrowed = false
-    userFrom.save()
+    createUser(userFromID)
   }
   // if (userFrom.hasBorrowed == true) {
   //   calculateLiquidty(userFromID)

@@ -259,6 +259,18 @@ export function createCTokenInfo(
   return cTokenStats
 }
 
+export function createUser(userID: string): User {
+  let user = new User(userID)
+  user.cTokens = []
+  user.countLiquidated = 0
+  user.countLiquidator = 0
+  user.totalBorrowInEth = BigDecimal.fromString('0')
+  user.totalSupplyInEth = BigDecimal.fromString('0')
+  user.hasBorrowed = false
+  user.save()
+  return user
+}
+
 export function calculateLiquidty(userAddr: string): void {
   // let totalSupplyInEth = BigDecimal.fromString("0")
   // let totalBorrowInEth = BigDecimal.fromString("0")

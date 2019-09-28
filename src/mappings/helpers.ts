@@ -138,13 +138,13 @@ export function getEthUsdPrice(blockNumber: i32): Array<BigDecimal> {
   return [tokenPerEthRatio, tokenPerUSDRatio]
 }
 
-export function updateMarket(marketAddress: Address, blockNumber: i32): void {
+export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   let marketID = marketAddress.toHex()
   let market = Market.load(marketID)
   let contract = CToken.bind(marketAddress)
   let tokenPrices: Array<BigDecimal>
 
-  // it is CETH
+  // It is CETH, which has a slightly different interface
   if (marketAddress.toHexString() == '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5') {
     if (market == null) {
       market = new Market(marketID)
@@ -158,7 +158,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
     }
     tokenPrices = getEthUsdPrice(blockNumber)
 
-    // it is all other CERC20 contracts
+    // It is all other CERC20 contracts
   } else {
     if (market == null) {
       market = new Market(marketID)
@@ -227,6 +227,8 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
     .plus(market.totalBorrows)
     .minus(market.totalReserves)
   market.save()
+
+  return market as Market
 }
 
 export function createCTokenInfo(

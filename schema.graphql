@@ -11,7 +11,7 @@ type Market @entity {
     underlyingAddress: Bytes!                # Underlying token address (eth is null)
     underlyingDecimals: Int!                # Undelying decimals (eth is 18)
     symbol: String!                         # cDAI, cBAT, etc.
-    accrualBlockNumber: BigInt!             # Block number the market is updated to
+    accrualBlockNumber: Int!             # Block number the market is updated to
     tokenPerEthRatio: BigDecimal!           # How many tokens equal 1 ETH. 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
     tokenPerUSDRatio: BigDecimal!           # How many tokens equal 1 USD. 19 would mean 1 REP = 19 USD. Currently based on DAI Price oracle
 
@@ -57,7 +57,7 @@ type CTokenInfo @entity {
     transactionHashes: [Bytes!]!            # each tx hash is recorded. makes for easily displaying in a Dapp
     transactionTimes: [Int!]!               # each tx block time is recorded. makes for easily displaying in a Dapp
 
-    accrualBlockNumber: BigInt!             # block number the user balances are updated to
+    accrualBlockNumber: Int!             # block number the user balances are updated to
     cTokenBalance: BigDecimal!              # total ctokens the user owns of this asset
     totalUnderlyingSupplied: BigDecimal!         # Total amount the user has supplied of the underlying ERC20 or ETH
     totalUnderlyingRedeemed: BigDecimal!         # Total amount the user has redeemed of the underlying ERC20 or ETH

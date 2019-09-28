@@ -15,7 +15,13 @@ import {
 
 import { Market, User, CTokenInfo } from '../types/schema'
 
-import { calculateLiquidty, updateMarket, createCTokenInfo, createUser } from './helpers'
+import {
+  calculateLiquidty,
+  updateMarket,
+  createCTokenInfo,
+  createUser,
+  updateCommonCTokenStats,
+} from './helpers'
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -26,34 +32,22 @@ import { calculateLiquidty, updateMarket, createCTokenInfo, createUser } from '.
  */
 export function handleMint(event: Mint): void {
   let market = updateMarket(event.address, event.block.number.toI32())
-
-  /********** User Below **********/
   let userID = event.params.minter.toHex()
   let user = User.load(userID)
   if (user == null) {
     user = createUser(userID)
   }
 
-  let cTokenStatsID = event.address
-    .toHexString()
-    .concat('-')
-    .concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
-  if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(
-      cTokenStatsID,
-      market.symbol,
-      event.params.minter.toHexString(),
-    )
-  }
-
-  let txHashes = cTokenStats.transactionHashes
-  txHashes.push(event.transaction.hash)
-  cTokenStats.transactionHashes = txHashes
-  let txTimes = cTokenStats.transactionTimes
-  txTimes.push(event.block.timestamp.toI32())
-  cTokenStats.transactionTimes = txTimes
-  cTokenStats.accrualBlockNumber = event.block.number
+  // Update cTokenStats common for all events, and return the stats to update unique
+  // values for each event
+  let cTokenStats = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
 
   cTokenStats.cTokenBalance = cTokenStats.cTokenBalance.plus(
     event.params.mintTokens.toBigDecimal().div(BigDecimal.fromString('100000000')),
@@ -74,7 +68,6 @@ export function handleMint(event: Mint): void {
 
   cTokenStats.save()
 
-  /********** Liquidity Calculations Below **********/
   // if (user.hasBorrowed == true) {
   //   calculateLiquidty(userID)
   // }
@@ -88,30 +81,17 @@ export function handleMint(event: Mint): void {
  */
 export function handleRedeem(event: Redeem): void {
   let market = updateMarket(event.address, event.block.number.toI32())
-
   let userID = event.params.redeemer.toHex()
-  let cTokenStatsID = event.address
-    .toHexString()
-    .concat('-')
-    .concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
-
-  if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(
-      cTokenStatsID,
-      market.symbol,
-      event.params.redeemer.toHexString(),
-    )
-  }
-
-  /********** User Updates Below **********/
-  let txHashes = cTokenStats.transactionHashes
-  txHashes.push(event.transaction.hash)
-  cTokenStats.transactionHashes = txHashes
-  let txTimes = cTokenStats.transactionTimes
-  txTimes.push(event.block.timestamp.toI32())
-  cTokenStats.transactionTimes = txTimes
-  cTokenStats.accrualBlockNumber = event.block.number
+  // Update cTokenStats common for all events, and return the stats to update unique
+  // values for each event
+  let cTokenStats = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
 
   cTokenStats.cTokenBalance.minus(
     event.params.redeemTokens.toBigDecimal().div(BigDecimal.fromString('100000000')),
@@ -132,7 +112,6 @@ export function handleRedeem(event: Redeem): void {
 
   cTokenStats.save()
 
-  /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   if (user == null) {
     createUser(userID)
@@ -150,31 +129,17 @@ export function handleRedeem(event: Redeem): void {
  */
 export function handleBorrow(event: Borrow): void {
   let market = updateMarket(event.address, event.block.number.toI32())
-
-  /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
-  let cTokenStatsID = event.address
-    .toHexString()
-    .concat('-')
-    .concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
-
-  // this is needed, since you could lend in one asset and borrow in another
-  if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(
-      cTokenStatsID,
-      market.symbol,
-      event.params.borrower.toHexString(),
-    )
-  }
-
-  let txHashes = cTokenStats.transactionHashes
-  txHashes.push(event.transaction.hash)
-  cTokenStats.transactionHashes = txHashes
-  let txTimes = cTokenStats.transactionTimes
-  txTimes.push(event.block.timestamp.toI32())
-  cTokenStats.transactionTimes = txTimes
-  cTokenStats.accrualBlockNumber = event.block.number
+  // Update cTokenStats common for all events, and return the stats to update unique
+  // values for each event
+  let cTokenStats = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
 
   cTokenStats.userBorrowIndex = market.borrowIndex
   cTokenStats.realizedBorrowBalance = cTokenStats.realizedBorrowBalance
@@ -192,7 +157,6 @@ export function handleBorrow(event: Borrow): void {
 
   cTokenStats.save()
 
-  /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   if (user == null) {
     user = createUser(userID)
@@ -211,22 +175,17 @@ export function handleBorrow(event: Borrow): void {
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
   let market = updateMarket(event.address, event.block.number.toI32())
-
-  /********** User Updates Below **********/
   let userID = event.params.borrower.toHex()
-  let cTokenStatsID = event.address
-    .toHexString()
-    .concat('-')
-    .concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
-
-  let txHashes = cTokenStats.transactionHashes
-  txHashes.push(event.transaction.hash)
-  cTokenStats.transactionHashes = txHashes
-  let txTimes = cTokenStats.transactionTimes
-  txTimes.push(event.block.timestamp.toI32())
-  cTokenStats.transactionTimes = txTimes
-  cTokenStats.accrualBlockNumber = event.block.number
+  // Update cTokenStats common for all events, and return the stats to update unique
+  // values for each event
+  let cTokenStats = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
 
   cTokenStats.userBorrowIndex = market.borrowIndex
   cTokenStats.realizedBorrowBalance = cTokenStats.realizedBorrowBalance
@@ -245,7 +204,6 @@ export function handleRepayBorrow(event: RepayBorrow): void {
 
   cTokenStats.save()
 
-  /********** Liquidity Calculations Below **********/
   let user = User.load(userID)
   if (user == null) {
     createUser(userID)
@@ -304,88 +262,78 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
  */
 export function handleTransfer(event: Transfer): void {
   let market = updateMarket(event.address, event.block.number.toI32())
-
-  let cTokenStatsFromID = market.id.concat('-').concat(event.params.from.toHex())
-  let cTokenStatsFrom = CTokenInfo.load(cTokenStatsFromID)
-  let txHashesFrom = cTokenStatsFrom.transactionHashes
-  txHashesFrom.push(event.transaction.hash)
-  cTokenStatsFrom.transactionHashes = txHashesFrom
-  let txTimesFrom = cTokenStatsFrom.transactionTimes
-  txTimesFrom.push(event.block.timestamp.toI32())
-  cTokenStatsFrom.transactionTimes = txTimesFrom
-  cTokenStatsFrom.accrualBlockNumber = event.block.number
-
-  let amountUnderlying = market.exchangeRate.times(event.params.amount.toBigDecimal())
-
-  cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance
-    .minus(event.params.amount.toBigDecimal())
-    .div(BigDecimal.fromString('100000000'))
-
-  // Get updated realized balance with the updated market exchange rate
-  // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
-  cTokenStatsFrom.realizedLendBalance = market.exchangeRate.times(
-    cTokenStatsFrom.cTokenBalance,
-  )
-
-  cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
-    amountUnderlying,
-  )
-  cTokenStatsFrom.realizedSupplyInterest = cTokenStatsFrom.realizedLendBalance
-    .minus(cTokenStatsFrom.totalUnderlyingSupplied)
-    .plus(cTokenStatsFrom.totalUnderlyingRedeemed)
-
-  cTokenStatsFrom.save()
-
-  /********** User To Updates Below **********/
-  // We do the same for userTo as userFrom, but check if user and cTokenStats entities are null
-  let userToID = event.params.to.toHex()
-  let userTo = User.load(userToID)
-  if (userTo == null) {
-    createUser(userToID)
-  }
-
-  let cTokenStatsToID = market.id.concat('-').concat(userToID)
-  let cTokenStatsTo = CTokenInfo.load(cTokenStatsToID)
-  if (cTokenStatsTo == null) {
-    cTokenStatsTo = createCTokenInfo(
-      cTokenStatsToID,
-      market.symbol,
-      event.params.to.toHexString(),
-    )
-  }
-
-  let txHashesTo = cTokenStatsTo.transactionHashes
-  txHashesTo.push(event.transaction.hash)
-  cTokenStatsTo.transactionHashes = txHashesTo
-  let txTimesTo = cTokenStatsTo.transactionTimes
-  txTimesTo.push(event.block.timestamp.toI32())
-  cTokenStatsTo.transactionTimes = txTimesTo
-  cTokenStatsTo.accrualBlockNumber = event.block.number
-
-  cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance.plus(
-    event.params.amount.toBigDecimal(),
-  )
-
-  // Get updated realized balance with the updated market exchange rate
-  // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
-  cTokenStatsFrom.realizedLendBalance = market.exchangeRate.times(
-    cTokenStatsFrom.cTokenBalance,
-  )
-
-  cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
-    amountUnderlying,
-  )
-  cTokenStatsTo.realizedSupplyInterest = cTokenStatsTo.realizedLendBalance
-    .minus(cTokenStatsTo.totalUnderlyingSupplied)
-    .plus(cTokenStatsTo.totalUnderlyingRedeemed)
-  cTokenStatsTo.save()
-
-  /********** Liquidity Updates Below **********/
-  // TODO - hmm, this seems impossible to happen, should i still keep it? i remember an edge case liek this from the past
   let userFromID = event.params.from.toHex()
+  // TODO - hmm, this seems impossible to happen, should i still keep it? i remember an edge case liek this from the past
   let userFrom = User.load(userFromID)
   if (userFrom == null) {
     createUser(userFromID)
+    // Update cTokenStats common for all events, and return the stats to update unique
+    // values for each event
+    let cTokenStatsFrom = updateCommonCTokenStats(
+      market.id,
+      market.symbol,
+      userFromID,
+      event.transaction.hash,
+      event.block.timestamp.toI32(),
+      event.block.number.toI32(),
+    )
+
+    let amountUnderlying = market.exchangeRate.times(event.params.amount.toBigDecimal())
+
+    cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance
+      .minus(event.params.amount.toBigDecimal())
+      .div(BigDecimal.fromString('100000000'))
+
+    // Get updated realized balance with the updated market exchange rate
+    // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
+    cTokenStatsFrom.realizedLendBalance = market.exchangeRate.times(
+      cTokenStatsFrom.cTokenBalance,
+    )
+
+    cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
+      amountUnderlying,
+    )
+    cTokenStatsFrom.realizedSupplyInterest = cTokenStatsFrom.realizedLendBalance
+      .minus(cTokenStatsFrom.totalUnderlyingSupplied)
+      .plus(cTokenStatsFrom.totalUnderlyingRedeemed)
+
+    cTokenStatsFrom.save()
+
+    /********** User To Updates Below **********/
+    // We do the same for userTo as userFrom, but check if user and cTokenStats entities are null
+    let userToID = event.params.to.toHex()
+    let userTo = User.load(userToID)
+    if (userTo == null) {
+      createUser(userToID)
+    }
+    // Update cTokenStats common for all events, and return the stats to update unique
+    // values for each event
+    let cTokenStatsTo = updateCommonCTokenStats(
+      market.id,
+      market.symbol,
+      userToID,
+      event.transaction.hash,
+      event.block.timestamp.toI32(),
+      event.block.number.toI32(),
+    )
+
+    cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance.plus(
+      event.params.amount.toBigDecimal(),
+    )
+
+    // Get updated realized balance with the updated market exchange rate
+    // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
+    cTokenStatsFrom.realizedLendBalance = market.exchangeRate.times(
+      cTokenStatsFrom.cTokenBalance,
+    )
+
+    cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
+      amountUnderlying,
+    )
+    cTokenStatsTo.realizedSupplyInterest = cTokenStatsTo.realizedLendBalance
+      .minus(cTokenStatsTo.totalUnderlyingSupplied)
+      .plus(cTokenStatsTo.totalUnderlyingRedeemed)
+    cTokenStatsTo.save()
   }
   // if (userFrom.hasBorrowed == true) {
   //   calculateLiquidty(userFromID)

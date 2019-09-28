@@ -1,7 +1,7 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
 // For each division by 10, add one to exponent to truncate one significant figure
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts/index'
+import { Address, BigDecimal, BigInt, log, Bytes } from '@graphprotocol/graph-ts/index'
 import { CTokenInfo, Market, User, Comptroller } from '../types/schema'
 
 // PriceOracle is valid from Comptroller deployment until block 8498421
@@ -179,7 +179,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
 
   market.tokenPerEthRatio = tokenPrices[0]
   market.tokenPerUSDRatio = tokenPrices[1]
-  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.accrualBlockNumber = contract.accrualBlockNumber().toI32()
   market.totalSupply = contract
     .totalSupply()
     .toBigDecimal()
@@ -241,7 +241,7 @@ export function createCTokenInfo(
   cTokenStats.user = user
   cTokenStats.transactionHashes = []
   cTokenStats.transactionTimes = []
-  cTokenStats.accrualBlockNumber = BigInt.fromI32(0)
+  cTokenStats.accrualBlockNumber = 0
   cTokenStats.cTokenBalance = BigDecimal.fromString('0')
   cTokenStats.totalUnderlyingSupplied = BigDecimal.fromString('0')
   cTokenStats.totalUnderlyingRedeemed = BigDecimal.fromString('0')
@@ -269,6 +269,29 @@ export function createUser(userID: string): User {
   user.hasBorrowed = false
   user.save()
   return user
+}
+
+export function updateCommonCTokenStats(
+  marketID: string,
+  marketSymbol: string,
+  userID: string,
+  txHash: Bytes,
+  timestamp: i32,
+  blockNumber: i32,
+): CTokenInfo {
+  let cTokenStatsID = marketID.concat('-').concat(userID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
+  if (cTokenStats == null) {
+    cTokenStats = createCTokenInfo(cTokenStatsID, marketSymbol, userID)
+  }
+  let txHashes = cTokenStats.transactionHashes
+  txHashes.push(txHash)
+  cTokenStats.transactionHashes = txHashes
+  let txTimes = cTokenStats.transactionTimes
+  txTimes.push(timestamp)
+  cTokenStats.transactionTimes = txTimes
+  cTokenStats.accrualBlockNumber = blockNumber
+  return cTokenStats as CTokenInfo
 }
 
 export function calculateLiquidty(userAddr: string): void {

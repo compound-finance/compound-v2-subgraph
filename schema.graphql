@@ -52,6 +52,7 @@ type User @entity {
 # It is its own entity type, so there can be a one to many relationship under User.cTokens
 type CTokenInfo @entity {
     id: ID!                                 # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
+    market: Market!
     symbol: String!
     user: User!                             # user address for one-to-many relationships
     transactionHashes: [Bytes!]!            # each tx hash is recorded. makes for easily displaying in a Dapp
@@ -67,12 +68,14 @@ type CTokenInfo @entity {
 
     ### These values are only up to date to the last event the user interacted with, and shouldn't be displayed in a dapp. Display unrealized values to users
     ### realizedLendBalance and realizedBorrowBalance are what are stored in the smart contract
+    ### These are all in units of underlying token
     realizedLendBalance: BigDecimal!        # realizedLendBalance =  cTokenBalance * market.exchangeRate
     realizedSupplyInterest: BigDecimal!     # realizedSupplyInterest = realizedLendBalance - underlyingSupplied + underlyingRedeemed
     realizedBorrowBalance: BigDecimal!      # realizedBorrowBalance = previousRealizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex
     realizedBorrowInterest: BigDecimal!     # realizedBorrowInterest = realizedBorrowBalance - underlyingBorrowed + underlyingRepaid
 
     ### The values below are dynamically calculated with a JS wrapper. They should be displayed to users. It factors in the latest block delta for calculations
+    ### These are all in units of underlying token
     unrealizedLendBalance: BigDecimal!      # unrealizedLendBalance = cTokenBalance * market.exchangeRateLatest
     unrealizedSupplyInterest: BigDecimal!   # unrealizedSupplyInterest = unrealizedLendBalance - realizedLendBalance
     unrealizedBorrowBalance: BigDecimal!    # unrealizedBorrowBalance = realizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex

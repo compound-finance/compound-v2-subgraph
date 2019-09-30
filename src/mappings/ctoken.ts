@@ -35,7 +35,7 @@ export function handleMint(event: Mint): void {
   let userID = event.params.minter.toHex()
   let user = User.load(userID)
   if (user == null) {
-    user = createUser(userID)
+    createUser(userID)
   }
 
   // Update cTokenStats common for all events, and return the stats to update unique
@@ -49,19 +49,22 @@ export function handleMint(event: Mint): void {
     event.block.number.toI32(),
   )
 
-  cTokenStats.cTokenBalance = cTokenStats.cTokenBalance.plus(
-    event.params.mintTokens.toBigDecimal().div(BigDecimal.fromString('100000000')),
-  )
+  cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
+    .plus(event.params.mintTokens.toBigDecimal().div(BigDecimal.fromString('100000000')))
+    .truncate(market.underlyingDecimals)
 
   // Get updated realized balance with the updated market exchange rate
   // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
   cTokenStats.realizedLendBalance = market.exchangeRate.times(cTokenStats.cTokenBalance)
 
-  cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied.plus(
-    event.params.mintAmount
-      .toBigDecimal()
-      .div(BigDecimal.fromString('1000000000000000000')),
-  )
+  cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied
+    .plus(
+      event.params.mintAmount
+        .toBigDecimal()
+        .div(BigDecimal.fromString('1000000000000000000')),
+    )
+    .truncate(market.underlyingDecimals)
+
   cTokenStats.realizedSupplyInterest = cTokenStats.realizedLendBalance
     .minus(cTokenStats.totalUnderlyingSupplied)
     .plus(cTokenStats.totalUnderlyingRedeemed)
@@ -93,19 +96,24 @@ export function handleRedeem(event: Redeem): void {
     event.block.number.toI32(),
   )
 
-  cTokenStats.cTokenBalance.minus(
-    event.params.redeemTokens.toBigDecimal().div(BigDecimal.fromString('100000000')),
-  )
+  cTokenStats.cTokenBalance
+    .minus(
+      event.params.redeemTokens.toBigDecimal().div(BigDecimal.fromString('100000000')),
+    )
+    .truncate(market.underlyingDecimals)
 
   // Get updated realized balance with the updated market exchange rate
   // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
   cTokenStats.realizedLendBalance = market.exchangeRate.times(cTokenStats.cTokenBalance)
 
-  cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed.plus(
-    event.params.redeemAmount
-      .toBigDecimal()
-      .div(BigDecimal.fromString('1000000000000000000')),
-  )
+  cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed
+    .plus(
+      event.params.redeemAmount
+        .toBigDecimal()
+        .div(BigDecimal.fromString('1000000000000000000')),
+    )
+    .truncate(market.underlyingDecimals)
+
   cTokenStats.realizedSupplyInterest = cTokenStats.realizedLendBalance
     .minus(cTokenStats.totalUnderlyingSupplied)
     .plus(cTokenStats.totalUnderlyingRedeemed)
@@ -145,12 +153,15 @@ export function handleBorrow(event: Borrow): void {
   cTokenStats.realizedBorrowBalance = cTokenStats.realizedBorrowBalance
     .times(market.borrowIndex)
     .div(cTokenStats.userBorrowIndex)
+    .truncate(market.underlyingDecimals)
 
-  cTokenStats.totalUnderlyingBorrowed = cTokenStats.totalUnderlyingBorrowed.plus(
-    event.params.borrowAmount
-      .toBigDecimal()
-      .div(BigDecimal.fromString('1000000000000000000')),
-  )
+  cTokenStats.totalUnderlyingBorrowed = cTokenStats.totalUnderlyingBorrowed
+    .plus(
+      event.params.borrowAmount
+        .toBigDecimal()
+        .div(BigDecimal.fromString('1000000000000000000')),
+    )
+    .truncate(market.underlyingDecimals)
   cTokenStats.realizedBorrowInterest = cTokenStats.realizedBorrowBalance
     .minus(cTokenStats.totalUnderlyingBorrowed)
     .plus(cTokenStats.totalUnderlyingRepaid)
@@ -191,6 +202,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   cTokenStats.realizedBorrowBalance = cTokenStats.realizedBorrowBalance
     .times(market.borrowIndex)
     .div(cTokenStats.userBorrowIndex)
+    .truncate(market.underlyingDecimals)
 
   cTokenStats.totalUnderlyingRepaid = cTokenStats.totalUnderlyingRepaid.plus(
     event.params.repayAmount
@@ -283,6 +295,7 @@ export function handleTransfer(event: Transfer): void {
     cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance
       .minus(event.params.amount.toBigDecimal())
       .div(BigDecimal.fromString('100000000'))
+      .truncate(market.underlyingDecimals)
 
     // Get updated realized balance with the updated market exchange rate
     // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing

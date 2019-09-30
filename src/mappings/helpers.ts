@@ -190,7 +190,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   market.exchangeRate = contract
     .exchangeRateStored()
     .toBigDecimal()
-    .div(BigDecimal.fromString('10000000000000000000000000000'))
+    .div(exponentToBigDecimal(market.underlyingDecimals))
 
   market.totalReserves = contract
     .totalReserves()
@@ -235,9 +235,11 @@ export function createCTokenInfo(
   cTokenStatsID: string,
   symbol: string,
   user: string,
+  marketID: string,
 ): CTokenInfo {
   let cTokenStats = new CTokenInfo(cTokenStatsID)
   cTokenStats.symbol = symbol
+  cTokenStats.market = marketID
   cTokenStats.user = user
   cTokenStats.transactionHashes = []
   cTokenStats.transactionTimes = []
@@ -282,7 +284,7 @@ export function updateCommonCTokenStats(
   let cTokenStatsID = marketID.concat('-').concat(userID)
   let cTokenStats = CTokenInfo.load(cTokenStatsID)
   if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(cTokenStatsID, marketSymbol, userID)
+    cTokenStats = createCTokenInfo(cTokenStatsID, marketSymbol, userID, marketID)
   }
   let txHashes = cTokenStats.transactionHashes
   txHashes.push(txHash)

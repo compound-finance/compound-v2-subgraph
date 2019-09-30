@@ -11,7 +11,7 @@ import { PriceOracle2 } from '../types/cREP/PriceOracle2'
 import { ERC20 } from '../types/cREP/ERC20'
 import { CToken } from '../types/cREP/CToken'
 
-function exponentToBigDecimal(decimals: i32): BigDecimal {
+export function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
   for (let i = 0; i < decimals; i++) {
     bd = bd.times(BigDecimal.fromString('10'))
@@ -19,7 +19,12 @@ function exponentToBigDecimal(decimals: i32): BigDecimal {
   return bd
 }
 
+/* Decimals of underlying assets
+ * USCD = 6
+ * WBTC = 8
+ * all others = 18 */
 let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
+export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
 
 // Used for all cERC20 contracts
 export function getTokenPrices(
@@ -183,14 +188,21 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   market.totalSupply = contract
     .totalSupply()
     .toBigDecimal()
-    .div(BigDecimal.fromString('100000000'))
+    .div(cTokenDecimalsBD)
 
-  // 10^28, removing 10^18 for exp precision, and then
-  // token precision / ctoken precision -> 10^18/10^8 = 10^10
+  // If you call the cDAI contract on etherscan it comes back (2.0 * 10^26)
+  // If you call the cUSDC contract on etherscan it comes back (2.0 * 10^14)
+  // The real value is 0.02. So cDAI is off by 10^28, and cUSDC 10^16
+  // Must div by tokenDecimals, 10^market.underlyingDecimals
+  // Must multiple by ctokenDecimals, 10^8
+  // Must div by mantissa, 10^18
   market.exchangeRate = contract
     .exchangeRateStored()
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
+    .times(cTokenDecimalsBD)
+    .div(mantissaFactorBD)
+    .truncate(18)
 
   market.totalReserves = contract
     .totalReserves()

@@ -4,6 +4,7 @@ type Comptroller @entity {
     closeFactor: BigInt                     # factor used to determine repayAmount for liquidating
     liquidationIncentive: BigInt            # extra % liquidators save for liqudation a user
     maxAssets: BigInt                       # max assets a single user can enter
+    accrualBlockNumberSubgraph: Int!        # block number the market is updated to in the subgraph
 }
 
 type Market @entity {
@@ -11,9 +12,10 @@ type Market @entity {
     underlyingAddress: Bytes!               # underlying token address (eth is 0x0000)
     underlyingDecimals: Int!                # undelying decimals
     symbol: String!                         # cDAI, cBAT, etc.
-    accrualBlockNumber: Int!                # block number the market is updated to
+    accrualBlockNumber: Int!                # block number the market is updated to on ethereum
     tokenPerEthRatio: BigDecimal!           # 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
     tokenPerUSDRatio: BigDecimal!           # 19 would mean 1 REP = 19 USD
+    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
 
     totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
     exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
@@ -25,8 +27,6 @@ type Market @entity {
     totalBorrows: BigDecimal!               # total borrows for the market
     perBlockBorrowInterest: BigDecimal!     # to get Annual Percent Return (APR) : perBlockBorrowInterest * 2102400
     borrowIndex: BigDecimal!                # the history of the markets borrow index return since inception. (Think S&P 500)
-
-    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
 
     # Created by Comptroller events
     usersEntered: [Bytes!]!                 # users who have entered this market

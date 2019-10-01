@@ -12,6 +12,17 @@ import { CToken } from '../types/cREP/CToken'
 
 import { exponentToBigDecimal, mantissaFactorBD, cTokenDecimalsBD } from './helpers'
 
+/* TODO
+ * 1) markets need to be updated every block
+ * 2) technically, if no event happened, we can do a much simpler update. but this is to be
+ * added in the future after we get a working version
+ * 3) this all means that update market never gets called by event handlers
+ * 4) markets must be updated before events, otherwise i need to do a workaround
+ * 5) price oracle only gets queried once for each block
+
+
+ */
+
 // Used for all cERC20 contracts
 export function getTokenPrices(
   blockNumber: i32,
@@ -129,6 +140,11 @@ export function getEthUsdPrice(blockNumber: i32): Array<BigDecimal> {
   return [tokenPerEthRatio, tokenPerUSDRatio]
 }
 
+/* For now, since block triggers go last, we must trigger updateMarkets() on the first event
+ * or block trigger if no events happen in a block. To do this we introduce the concept of
+ * accrualBlockNumberSubgraph. If it is equal, to any market accrual block number, it  means
+ * all have been updated
+ */
 export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   let marketID = marketAddress.toHex()
   let market = Market.load(marketID)
@@ -189,25 +205,37 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
     .times(cTokenDecimalsBD)
     .div(mantissaFactorBD)
     .truncate(18)
+  market.borrowIndex = contract
+    .borrowIndex()
+    .toBigDecimal()
+    .div(mantissaFactorBD)
+    .truncate(18)
 
   market.totalReserves = contract
     .totalReserves()
     .toBigDecimal()
-    .div(BigDecimal.fromString('1000000000000000000'))
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
   market.totalBorrows = contract
     .totalBorrows()
     .toBigDecimal()
-    .div(BigDecimal.fromString('1000000000000000000'))
-  market.borrowIndex = contract
-    .borrowIndex()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+  market.totalCash = contract
+    .getCash()
     .toBigDecimal()
-    .div(BigDecimal.fromString('1000000000000000000'))
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+  market.totalDeposits = market.totalCash
+    .plus(market.totalBorrows)
+    .minus(market.totalReserves)
 
   // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
   market.perBlockBorrowInterest = contract
     .borrowRatePerBlock()
     .toBigDecimal()
-    .div(BigDecimal.fromString('1000000000000000000'))
+    .div(mantissaFactorBD)
+    .truncate(18)
 
   // TODO make the below more robust. technically if it fails, we can calculate
   //  on our side the value , since supply rate is a derivative of borrow
@@ -217,14 +245,10 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   } else {
     market.perBlockSupplyInterest = testing.value
       .toBigDecimal()
-      .div(BigDecimal.fromString('1000000000000000000'))
+      .div(mantissaFactorBD)
+      .truncate(18)
   }
 
-  market.totalCash = contract.getCash().toBigDecimal()
-  market.totalDeposits = market.totalCash
-    .plus(market.totalBorrows)
-    .minus(market.totalReserves)
   market.save()
-
   return market as Market
 }

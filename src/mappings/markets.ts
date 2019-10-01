@@ -10,7 +10,15 @@ import { PriceOracle2 } from '../types/cREP/PriceOracle2'
 import { ERC20 } from '../types/cREP/ERC20'
 import { CToken } from '../types/cREP/CToken'
 
-import { exponentToBigDecimal, mantissaFactorBD, cTokenDecimalsBD } from './helpers'
+import {
+  exponentToBigDecimal,
+  mantissaFactor,
+  mantissaFactorBD,
+  cTokenDecimalsBD,
+} from './helpers'
+
+let cUSDCAddress = '0x39aa39c021dfbae8fac545936693ac917d5e7563'
+let cETHAddress = '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5'
 
 /* TODO
  * 1) markets need to be updated every block
@@ -19,17 +27,15 @@ import { exponentToBigDecimal, mantissaFactorBD, cTokenDecimalsBD } from './help
  * 3) this all means that update market never gets called by event handlers
  * 4) markets must be updated before events, otherwise i need to do a workaround
  * 5) price oracle only gets queried once for each block
-
-
  */
 
 // Used for all cERC20 contracts
-export function getTokenPrices(
+function getTokenPrice(
   blockNumber: i32,
   eventAddress: Address,
   underlyingAddress: Address,
   underlyingDecimals: i32,
-): Array<BigDecimal> {
+): BigDecimal {
   let comptroller = Comptroller.load('1')
   let oracleAddress = comptroller.priceOracle as Address
   let tokenPerEthRatio: BigDecimal
@@ -63,20 +69,19 @@ export function getTokenPrices(
       .getUnderlyingPrice(eventAddress)
       .toBigDecimal()
       .div(bdFactor)
-
     // It is USDC, which we assume = 1 real USD (same as comptroller)
-    if (eventAddress.toHexString() == cUSDCAddress) {
-      tokenPerUSDRatio = BigDecimal.fromString('1')
-    } else {
-      let mantissaDecimalFactorUSDC = 18 - 6 + 18
-      let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
-      let usdPrice = oracle2
-        .getUnderlyingPrice(Address.fromString(cUSDCAddress))
-        .toBigDecimal()
-        .div(bdFactorUSDC)
-      tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-      tokenPerUSDRatio.truncate(18)
-    }
+    // if (eventAddress.toHexString() == cUSDCAddress) {
+    //   tokenPerUSDRatio = BigDecimal.fromString('1')
+    // } else {
+    //   let mantissaDecimalFactorUSDC = 18 - 6 + 18
+    //   let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
+    //   let usdPrice = oracle2
+    //     .getUnderlyingPrice(Address.fromString(cUSDCAddress))
+    //     .toBigDecimal()
+    //     .div(bdFactorUSDC)
+    //   tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+    //   tokenPerUSDRatio.truncate(18)
+    // }
 
     /* PriceOracle(1) is used (only for the first ~100 blocks of Comptroller. Annoying but we must
      * handle this. We use it for more than 100 blocks, see reason at top of if statement
@@ -92,100 +97,118 @@ export function getTokenPrices(
       .getPrice(underlyingAddress)
       .toBigDecimal()
       .div(mantissaFactorBD)
-    // It is USDC, which we assume = 1 real USD (same as comptroller)
-    if (eventAddress.toHexString() == cUSDCAddress) {
-      tokenPerUSDRatio = BigDecimal.fromString('1')
-    } else {
-      let usdPrice = oracle1
-        .getPrice(Address.fromString(USDCAddress))
-        .toBigDecimal()
-        .div(mantissaFactorBD)
-      tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-      tokenPerUSDRatio.truncate(18)
-    }
+    // // It is USDC, which we assume = 1 real USD (same as comptroller)
+    // if (eventAddress.toHexString() == cUSDCAddress) {
+    //   tokenPerUSDRatio = BigDecimal.fromString('1')
+    // } else {
+    //   let usdPrice = oracle1
+    //     .getPrice(Address.fromString(USDCAddress))
+    //     .toBigDecimal()
+    //     .div(mantissaFactorBD)
+    //   tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+    //   tokenPerUSDRatio.truncate(18)
+    // }
   }
-  return [tokenPerEthRatio, tokenPerUSDRatio]
+  return tokenPerEthRatio
 }
 
-// Only used for cETH
-export function getEthUsdPrice(blockNumber: i32): Array<BigDecimal> {
+function getUSDCpriceETH(blockNumber: i32): BigDecimal {
   let comptroller = Comptroller.load('1')
   let oracleAddress = comptroller.priceOracle as Address
-  let tokenPerEthRatio = BigDecimal.fromString('1')
-  let tokenPerUSDRatio: BigDecimal
-  let cUSDCAddress = '0x39aa39c021dfbae8fac545936693ac917d5e7563'
-  let USDCAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 '
   let priceOracle1Address = Address.fromString('02557a5e05defeffd4cae6d83ea3d173b272c904')
+  let USDCAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 '
+
+  // let cUSDCMarket = Market.load(cUSDCAddress)
+  //
+  // let cETHMarket = Market.load(cETHAddress)
+  // let ethPerEthRatio = BigDecimal.fromString('1')
+  // let ethPerUSDRatio: BigDecimal
+  let usdPrice: BigDecimal
 
   // See notes on block number if statement in getTokenPrices()
   if (blockNumber > 7715908) {
     let oracle2 = PriceOracle2.bind(oracleAddress)
     let mantissaDecimalFactorUSDC = 18 - 6 + 18
     let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
-    let usdPrice = oracle2
+    usdPrice = oracle2
       .getUnderlyingPrice(Address.fromString(cUSDCAddress))
       .toBigDecimal()
       .div(bdFactorUSDC)
-    tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-    tokenPerUSDRatio.truncate(18)
+    // tokenPerUSDRatio = ethPerEthRatio.div(usdPrice)
+    // tokenPerUSDRatio.truncate(18)
   } else {
     let oracle1 = PriceOracle.bind(priceOracle1Address)
-    let usdPrice = oracle1
+    usdPrice = oracle1
       .getPrice(Address.fromString(USDCAddress))
       .toBigDecimal()
       .div(mantissaFactorBD)
-    tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
-    tokenPerUSDRatio.truncate(18)
+    // tokenPerUSDRatio = tokenPerEthRatio.div(usdPrice)
+    // tokenPerUSDRatio.truncate(18)
   }
-  return [tokenPerEthRatio, tokenPerUSDRatio]
+  return usdPrice
 }
 
-/* For now, since block triggers go last, we must trigger updateMarkets() on the first event
- * or block trigger if no events happen in a block. To do this we introduce the concept of
- * accrualBlockNumberSubgraph. If it is equal, to any market accrual block number, it  means
- * all have been updated
- */
-export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
-  let marketID = marketAddress.toHex()
-  let market = Market.load(marketID)
-  let contract = CToken.bind(marketAddress)
-  let tokenPrices: Array<BigDecimal>
-
+export function createMarket(marketAddress: string): Market {
+  let market: Market
+  let contract = CToken.bind(Address.fromString(marketAddress))
   // It is CETH, which has a slightly different interface
-  if (marketAddress.toHexString() == '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5') {
-    if (market == null) {
-      market = new Market(marketID)
-      market.symbol = contract.symbol()
-      market.usersEntered = []
-      market.underlyingAddress = Address.fromString(
-        '0x0000000000000000000000000000000000000000',
-      )
-      market.underlyingDecimals = 18
-      market.reserveFactor = BigInt.fromI32(0)
-    }
-    tokenPrices = getEthUsdPrice(blockNumber)
+  if (marketAddress == cETHAddress) {
+    market = new Market(marketAddress)
+    market.symbol = contract.symbol()
+    market.usersEntered = []
+    market.underlyingAddress = Address.fromString(
+      '0x0000000000000000000000000000000000000000',
+    )
+    market.underlyingDecimals = 18
+    market.reserveFactor = BigInt.fromI32(0)
+    market.tokenPerEthRatio = BigDecimal.fromString('1')
+    // tokenPrices = getEthUsdPrice(blockNumber)
 
     // It is all other CERC20 contracts
   } else {
-    if (market == null) {
-      market = new Market(marketID)
-      market.symbol = contract.symbol()
-      market.usersEntered = []
-      market.underlyingAddress = contract.underlying()
-      let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
-      market.underlyingDecimals = underlyingContract.decimals()
-      market.reserveFactor = BigInt.fromI32(0)
+    market = new Market(marketAddress)
+    market.symbol = contract.symbol()
+    market.usersEntered = []
+    market.underlyingAddress = contract.underlying()
+    let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
+    market.underlyingDecimals = underlyingContract.decimals()
+    market.reserveFactor = BigInt.fromI32(0)
+    if (marketAddress == cUSDCAddress) {
+      market.tokenPerUSDRatio = BigDecimal.fromString('1')
     }
-    tokenPrices = getTokenPrices(
+  }
+  return market
+}
+
+function updateMarket(
+  market: Market,
+  usdPriceInEth: BigDecimal,
+  blockNumber: i32,
+): Market {
+  let contractAddress = Address.fromString(market.id)
+  let contract = CToken.bind(contractAddress)
+
+  // if cETH, we only update USD price
+  if (market.id == cETHAddress) {
+    market.tokenPerUSDRatio = market.tokenPerEthRatio
+      .div(usdPriceInEth)
+      .truncate(market.underlyingDecimals)
+  } else {
+    let tokenPriceEth = getTokenPrice(
       blockNumber,
-      marketAddress,
+      contractAddress,
       market.underlyingAddress as Address,
       market.underlyingDecimals,
     )
+    market.tokenPerEthRatio = tokenPriceEth.truncate(market.underlyingDecimals)
+    // if USDC, we only update ETH price
+    if (market.id != cUSDCAddress) {
+      market.tokenPerUSDRatio = market.tokenPerEthRatio
+        .div(usdPriceInEth)
+        .truncate(market.underlyingDecimals)
+    }
   }
 
-  market.tokenPerEthRatio = tokenPrices[0]
-  market.tokenPerUSDRatio = tokenPrices[1]
   market.accrualBlockNumber = contract.accrualBlockNumber().toI32()
   market.totalSupply = contract
     .totalSupply()
@@ -204,12 +227,12 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
     .div(exponentToBigDecimal(market.underlyingDecimals))
     .times(cTokenDecimalsBD)
     .div(mantissaFactorBD)
-    .truncate(18)
+    .truncate(mantissaFactor)
   market.borrowIndex = contract
     .borrowIndex()
     .toBigDecimal()
     .div(mantissaFactorBD)
-    .truncate(18)
+    .truncate(mantissaFactor)
 
   market.totalReserves = contract
     .totalReserves()
@@ -235,7 +258,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
     .borrowRatePerBlock()
     .toBigDecimal()
     .div(mantissaFactorBD)
-    .truncate(18)
+    .truncate(mantissaFactor)
 
   // TODO make the below more robust. technically if it fails, we can calculate
   //  on our side the value , since supply rate is a derivative of borrow
@@ -246,9 +269,66 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
     market.perBlockSupplyInterest = testing.value
       .toBigDecimal()
       .div(mantissaFactorBD)
-      .truncate(18)
+      .truncate(mantissaFactor)
   }
-
   market.save()
-  return market as Market
+  return market
+}
+
+/* For now, since block triggers go last, we must trigger updateMarkets() on the first event
+ * or block trigger if no events happen in a block. To do this we introduce the concept of
+ * accrualBlockNumberSubgraph. If it is equal, to any market accrual block number, it  means
+ * all have been updated
+ */
+export function updateMarkets(marketAddress: Address, blockNumber: i32): Market {
+  let marketID = marketAddress.toHexString()
+  let eventMarket = Market.load(marketID)
+  let loopMarket: Market | null
+  let comptroller = Comptroller.load('1')
+
+  // if true, this was already ran this block, don't do it again
+  if (comptroller.accrualBlockNumberSubgraph == blockNumber) {
+    return eventMarket as Market
+  } else {
+    comptroller.accrualBlockNumberSubgraph = blockNumber
+    comptroller.save()
+    let usdPriceInEth = getUSDCpriceETH(blockNumber)
+    /*
+     * Right now we can't dynamically add a contract and start indexing it from its inception.
+     * Since the Comptroller is not a factory, and you only add a market to it, it means the
+     * market will exist before the comptroller is aware of it. Therefore we can't dynamically
+     * add contracts until we support that since events may happen before the comptroller
+     * adds the contract. Because it leaves the possibility of the market values getting out of sync.
+     *
+     * So, we hardcode in all contracts into the manifest, and we use that hardcoded list here,
+     * and just loop. This means whenever compound adds an asset, we must update the subgraph!
+     */
+    let cTokens: Array<string> = [
+      '0x6c8c6b02e7b2be14d4fa6022dfd6d75921d90e4e', // cBAT
+      '0xf5dce57282a584d2746faf1593d3121fcac444dc', // cDAI
+      '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5', // cETH
+      '0x158079ee67fce2f58472a96584a73c7ab9ac95c1', // cREP
+      '0x39aa39c021dfbae8fac545936693ac917d5e7563', // cUSDC
+      '0xc11b1268c1a384e55c48c2391d8d480264a3a7f4', // cWBTC
+      '0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407', // cZRX
+    ]
+
+    for (let i = 0; i < cTokens.length; i++) {
+      loopMarket = Market.load(cTokens[i])
+      if (loopMarket == null) {
+        // Check if it is the eventMarket. In this case, we must create the market and update it
+        if (marketID == cTokens[i]) {
+          // We must pass the created market, rather that the loaded null market
+          loopMarket = createMarket(cTokens[i])
+          eventMarket = updateMarket(loopMarket as Market, usdPriceInEth, blockNumber)
+        } else {
+          // Do nothing, this market does not exist yet, so we shouldn't try to update it
+        }
+        // Update all other markets that exist
+      } else {
+        updateMarket(loopMarket as Market, usdPriceInEth, blockNumber)
+      }
+    }
+    return eventMarket as Market
+  }
 }

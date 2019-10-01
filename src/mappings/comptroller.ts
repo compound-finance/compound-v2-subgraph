@@ -40,7 +40,8 @@ export function handleNewCloseFactor(event: NewCloseFactor): void {
   comptroller.save()
 }
 
-// TODO - uncomment when i am not testing with just REP
+// TODO - add this in. It will be more complex that originally thought, because it is likely
+// this will be set before the market is created, which messes up current create login
 export function handleNewCollateralFactor(event: NewCollateralFactor): void {
   // let market = Market.load(event.params.cToken.toHexString())
   // market.collateralFactor = event.params.newCollateralFactorMantissa as BigDecimal
@@ -67,5 +68,6 @@ export function handleNewPriceOracle(event: NewPriceOracle): void {
     comptroller = new Comptroller('1')
   }
   comptroller.priceOracle = event.params.newPriceOracle
+  comptroller.accrualBlockNumberSubgraph = event.block.number.toI32() // we need to set this to start
   comptroller.save()
 }

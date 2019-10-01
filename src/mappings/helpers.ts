@@ -16,6 +16,7 @@ export function exponentToBigDecimal(decimals: i32): BigDecimal {
  * USCD = 6
  * WBTC = 8
  * all others = 18 */
+export let mantissaFactor = 18
 export let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
 export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
 

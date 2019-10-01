@@ -1,9 +1,9 @@
 type Comptroller @entity {
     id: ID!                                 # 1
     priceOracle: Bytes                      # price oracle address that comptroller uses
-    closeFactor: BigInt                     #
-    liquidationIncentive: BigInt            #
-    maxAssets: BigInt                       #
+    closeFactor: BigInt                     # factor used to determine repayAmount for liquidating
+    liquidationIncentive: BigInt            # extra % liquidators save for liqudation a user
+    maxAssets: BigInt                       # max assets a single user can enter
 }
 
 type Market @entity {
@@ -30,9 +30,12 @@ type Market @entity {
 
     # Created by Comptroller events
     usersEntered: [Bytes!]!                 # users who have entered this market
-    collateralFactor: BigDecimal            #
+    collateralFactor: BigDecimal            # factor for the most one can borrow in this market
 }
 
+# the following vaules are added by the JS wrapper: (TODO - still needs to be implemented)
+    # accountLiquidity
+    # availableToBorrowEth
 type User @entity {
     id: ID!                                                 # user eth address
     cTokens: [CTokenInfo!]! @derivedFrom(field: "user")     # array of CTokenInfo for user
@@ -41,25 +44,14 @@ type User @entity {
     countLiquidated: Int!                                   # times this account has been liquidated
     countLiquidator: Int!                                   # times this account has liquidated others
     hasBorrowed: Boolean!                                   # true if user has ever borrowed
-
-    # note - account liqidity is how much ETH is available to
-    # be collaterailzed, but keep in mind it still needs to
-    # meet the 150%. So 150 ETH would mean if you borrowed 100 ETH,
-    # it would go to 0 for liquidity.
-
-    # totalSupplyInEth / totalBorrowInEth. 1.5 implies perfect collateralization
-    # (dangerous), if 150% is required. If null, it means the user currently has no
-    # borrows in the protocol TODO - delay implementing until query time calculations
-    # accountLiquidity: BigDecimal
-
-    # totalSupplyInEth / 1.5 - totalBorrow . null means use has never borrowed. . If null,
-    # it means the user currently has no borrows in the protocol. NOTE - collateral will
-    # not always be 1.5, this needs to be checked out when Comptroller is
-    # released TODO - delay implementing until query time calculations
-    # availableToBorrowEth: BigDecimal
 }
 
 # CToken stats for a single users borrow and supply of an asset
+# The following values are added by the JS Wrapper:
+    # unrealizedLendBalance
+    # unrealizedSupplyInterest
+    # unrealizedBorrowBalance
+    # unrealizedBorrowInterest
 type CTokenInfo @entity {
     id: ID!                                 # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     market: Market!                         # market
@@ -83,11 +75,4 @@ type CTokenInfo @entity {
     realizedSupplyInterest: BigDecimal!     # realizedSupplyInterest = realizedLendBalance - underlyingSupplied + underlyingRedeemed
     realizedBorrowBalance: BigDecimal!      # realizedBorrowBalance = previousRealizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex
     realizedBorrowInterest: BigDecimal!     # realizedBorrowInterest = realizedBorrowBalance - underlyingBorrowed + underlyingRepaid
-
-    ### the values below are dynamically calculated with a JS wrapper. They should be displayed to users. It factors in the latest block delta for calculations
-    ### these are all in units of underlying token
-    unrealizedLendBalance: BigDecimal!      # unrealizedLendBalance = cTokenBalance * market.exchangeRateLatest
-    unrealizedSupplyInterest: BigDecimal!   # unrealizedSupplyInterest = unrealizedLendBalance - realizedLendBalance
-    unrealizedBorrowBalance: BigDecimal!    # unrealizedBorrowBalance = realizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex
-    unrealizedBorrowInterest: BigDecimal!   # unrealizedBorrowInterest = unrealizedBorrowBalance - realizedBorrowBalance
 }

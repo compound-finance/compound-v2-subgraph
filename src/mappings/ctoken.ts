@@ -10,12 +10,10 @@ import {
   AccrueInterest,
   NewReserveFactor,
 } from '../types/cREP/CToken'
-
 import { Market, User } from '../types/schema'
 
+import { updateMarket } from './markets'
 import {
-  calculateLiquidty,
-  updateMarket,
   createUser,
   updateCommonCTokenStats,
   exponentToBigDecimal,
@@ -70,10 +68,6 @@ export function handleMint(event: Mint): void {
     .plus(cTokenStats.totalUnderlyingRedeemed)
 
   cTokenStats.save()
-
-  // if (user.hasBorrowed == true) {
-  //   calculateLiquidty(userID)
-  // }
 }
 
 /*  User supplies cTokens into market and receives underlying asset in exchange
@@ -123,9 +117,6 @@ export function handleRedeem(event: Redeem): void {
   if (user == null) {
     createUser(userID)
   }
-  // if (user.hasBorrowed == true) {
-  //   calculateLiquidty(userID)
-  // }
 }
 
 /* Borrow assets from the protocol. All values either ETH or ERC20
@@ -184,7 +175,6 @@ export function handleBorrow(event: Borrow): void {
   }
   user.hasBorrowed = true
   user.save()
-  calculateLiquidty(userID)
 }
 
 // TODO - what happens when someone pays off their full borrow? their index should reset, but does it?
@@ -245,9 +235,6 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   if (user == null) {
     createUser(userID)
   }
-  // if (user.hasBorrowed == true) {
-  //   calculateLiquidty(userID)
-  // }
 }
 
 /*
@@ -382,10 +369,6 @@ export function handleTransfer(event: Transfer): void {
 
     cTokenStatsTo.save()
   }
-  // if (userFrom.hasBorrowed == true) {
-  //   calculateLiquidty(userFromID)
-  // }
-  // calculateLiquidty(userToID)
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {

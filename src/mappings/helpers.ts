@@ -1,7 +1,7 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
 // For each division by 10, add one to exponent to truncate one significant figure
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts/index'
+import { Address, BigDecimal, BigInt, log, Bytes } from '@graphprotocol/graph-ts/index'
 import { CTokenInfo, Market, User, Comptroller } from '../types/schema'
 
 // PriceOracle is valid from Comptroller deployment until block 8498421
@@ -11,7 +11,7 @@ import { PriceOracle2 } from '../types/cREP/PriceOracle2'
 import { ERC20 } from '../types/cREP/ERC20'
 import { CToken } from '../types/cREP/CToken'
 
-function exponentToBigDecimal(decimals: i32): BigDecimal {
+export function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
   for (let i = 0; i < decimals; i++) {
     bd = bd.times(BigDecimal.fromString('10'))
@@ -19,7 +19,12 @@ function exponentToBigDecimal(decimals: i32): BigDecimal {
   return bd
 }
 
+/* Decimals of underlying assets
+ * USCD = 6
+ * WBTC = 8
+ * all others = 18 */
 let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
+export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
 
 // Used for all cERC20 contracts
 export function getTokenPrices(
@@ -138,13 +143,13 @@ export function getEthUsdPrice(blockNumber: i32): Array<BigDecimal> {
   return [tokenPerEthRatio, tokenPerUSDRatio]
 }
 
-export function updateMarket(marketAddress: Address, blockNumber: i32): void {
+export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   let marketID = marketAddress.toHex()
   let market = Market.load(marketID)
   let contract = CToken.bind(marketAddress)
   let tokenPrices: Array<BigDecimal>
 
-  // it is CETH
+  // It is CETH, which has a slightly different interface
   if (marketAddress.toHexString() == '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5') {
     if (market == null) {
       market = new Market(marketID)
@@ -154,10 +159,11 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
         '0x0000000000000000000000000000000000000000',
       )
       market.underlyingDecimals = 18
+      market.reserveFactor = BigInt.fromI32(0)
     }
     tokenPrices = getEthUsdPrice(blockNumber)
 
-    // it is all other CERC20 contracts
+    // It is all other CERC20 contracts
   } else {
     if (market == null) {
       market = new Market(marketID)
@@ -166,6 +172,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
       market.underlyingAddress = contract.underlying()
       let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
       market.underlyingDecimals = underlyingContract.decimals()
+      market.reserveFactor = BigInt.fromI32(0)
     }
     tokenPrices = getTokenPrices(
       blockNumber,
@@ -177,18 +184,25 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
 
   market.tokenPerEthRatio = tokenPrices[0]
   market.tokenPerUSDRatio = tokenPrices[1]
-  market.accrualBlockNumber = contract.accrualBlockNumber()
+  market.accrualBlockNumber = contract.accrualBlockNumber().toI32()
   market.totalSupply = contract
     .totalSupply()
     .toBigDecimal()
-    .div(BigDecimal.fromString('100000000'))
+    .div(cTokenDecimalsBD)
 
-  // 10^28, removing 10^18 for exp precision, and then
-  // token precision / ctoken precision -> 10^18/10^8 = 10^10
+  // If you call the cDAI contract on etherscan it comes back (2.0 * 10^26)
+  // If you call the cUSDC contract on etherscan it comes back (2.0 * 10^14)
+  // The real value is 0.02. So cDAI is off by 10^28, and cUSDC 10^16
+  // Must div by tokenDecimals, 10^market.underlyingDecimals
+  // Must multiple by ctokenDecimals, 10^8
+  // Must div by mantissa, 10^18
   market.exchangeRate = contract
     .exchangeRateStored()
     .toBigDecimal()
-    .div(BigDecimal.fromString('10000000000000000000000000000'))
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .times(cTokenDecimalsBD)
+    .div(mantissaFactorBD)
+    .truncate(18)
 
   market.totalReserves = contract
     .totalReserves()
@@ -225,6 +239,73 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): void {
     .plus(market.totalBorrows)
     .minus(market.totalReserves)
   market.save()
+
+  return market as Market
+}
+
+export function createCTokenInfo(
+  cTokenStatsID: string,
+  symbol: string,
+  user: string,
+  marketID: string,
+): CTokenInfo {
+  let cTokenStats = new CTokenInfo(cTokenStatsID)
+  cTokenStats.symbol = symbol
+  cTokenStats.market = marketID
+  cTokenStats.user = user
+  cTokenStats.transactionHashes = []
+  cTokenStats.transactionTimes = []
+  cTokenStats.accrualBlockNumber = 0
+  cTokenStats.cTokenBalance = BigDecimal.fromString('0')
+  cTokenStats.totalUnderlyingSupplied = BigDecimal.fromString('0')
+  cTokenStats.totalUnderlyingRedeemed = BigDecimal.fromString('0')
+  cTokenStats.userBorrowIndex = BigDecimal.fromString('0')
+  cTokenStats.totalUnderlyingBorrowed = BigDecimal.fromString('0')
+  cTokenStats.totalUnderlyingRepaid = BigDecimal.fromString('0')
+  cTokenStats.realizedLendBalance = BigDecimal.fromString('0')
+  cTokenStats.realizedSupplyInterest = BigDecimal.fromString('0')
+  cTokenStats.realizedBorrowBalance = BigDecimal.fromString('0')
+  cTokenStats.realizedBorrowInterest = BigDecimal.fromString('0')
+  cTokenStats.unrealizedLendBalance = BigDecimal.fromString('0')
+  cTokenStats.unrealizedSupplyInterest = BigDecimal.fromString('0')
+  cTokenStats.unrealizedBorrowBalance = BigDecimal.fromString('0')
+  cTokenStats.unrealizedBorrowInterest = BigDecimal.fromString('0')
+  return cTokenStats
+}
+
+export function createUser(userID: string): User {
+  let user = new User(userID)
+  user.cTokens = []
+  user.countLiquidated = 0
+  user.countLiquidator = 0
+  user.totalBorrowInEth = BigDecimal.fromString('0')
+  user.totalSupplyInEth = BigDecimal.fromString('0')
+  user.hasBorrowed = false
+  user.save()
+  return user
+}
+
+export function updateCommonCTokenStats(
+  marketID: string,
+  marketSymbol: string,
+  userID: string,
+  txHash: Bytes,
+  timestamp: i32,
+  blockNumber: i32,
+): CTokenInfo {
+  let cTokenStatsID = marketID.concat('-').concat(userID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
+  if (cTokenStats == null) {
+    cTokenStats = createCTokenInfo(cTokenStatsID, marketSymbol, userID, marketID)
+  }
+  let txHashes = cTokenStats.transactionHashes
+  txHashes.push(txHash)
+  cTokenStats.transactionHashes = txHashes
+  let txTimes = cTokenStats.transactionTimes
+  txTimes.push(timestamp)
+  cTokenStats.transactionTimes = txTimes
+  cTokenStats.accrualBlockNumber = blockNumber
+  return cTokenStats as CTokenInfo
 }
 
 export function calculateLiquidty(userAddr: string): void {

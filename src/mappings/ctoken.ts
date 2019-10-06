@@ -12,7 +12,7 @@ import {
 } from '../types/cREP/CToken'
 import { Market, User } from '../types/schema'
 
-import { updateMarkets } from './markets'
+import { updateMarket } from './markets'
 import {
   createUser,
   updateCommonCTokenStats,
@@ -28,7 +28,7 @@ import {
  *  note - mints  originate from the cToken address, not 0x000000, which is typical of ERC-20s
  */
 export function handleMint(event: Mint): void {
-  let market = updateMarkets(event.address, event.block.number.toI32())
+  let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.minter.toHex()
   let user = User.load(userID)
   if (user == null) {
@@ -77,8 +77,9 @@ export function handleMint(event: Mint): void {
  *  event.redeemer is the user
  */
 export function handleRedeem(event: Redeem): void {
-  let market = updateMarkets(event.address, event.block.number.toI32())
+  let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.redeemer.toHex()
+
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
   let cTokenStats = updateCommonCTokenStats(
@@ -126,7 +127,7 @@ export function handleRedeem(event: Redeem): void {
  * event.params.borrower = the user
  */
 export function handleBorrow(event: Borrow): void {
-  let market = updateMarkets(event.address, event.block.number.toI32())
+  let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.borrower.toHex()
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
@@ -188,7 +189,7 @@ export function handleBorrow(event: Borrow): void {
  * event.params.payer = the payer
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
-  let market = updateMarkets(event.address, event.block.number.toI32())
+  let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.borrower.toHex()
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
@@ -251,8 +252,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
  */
 
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
-  updateMarkets(event.address, event.block.number.toI32())
-
+  updateMarket(event.address, event.block.number.toI32())
   let liquidatorID = event.params.liquidator.toHex()
   let liquidator = User.load(liquidatorID)
   if (liquidator == null) {
@@ -285,7 +285,7 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
  * event.params.amount = amount sent
  */
 export function handleTransfer(event: Transfer): void {
-  let market = updateMarkets(event.address, event.block.number.toI32())
+  let market = updateMarket(event.address, event.block.number.toI32())
   let userFromID = event.params.from.toHex()
   // TODO - hmm, this seems impossible to happen, should i still keep it? i remember an edge case liek this from the past
   let userFrom = User.load(userFromID)
@@ -372,7 +372,7 @@ export function handleTransfer(event: Transfer): void {
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {
-  updateMarkets(event.address, event.block.number.toI32())
+  updateMarket(event.address, event.block.number.toI32())
 }
 
 export function handleNewReserveFactor(event: NewReserveFactor): void {

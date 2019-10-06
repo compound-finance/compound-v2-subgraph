@@ -1,10 +1,10 @@
+# TODO - add in comments for all the fields, so they show up in the explorer
 type Comptroller @entity {
     id: ID!                                 # 1
     priceOracle: Bytes                      # price oracle address that comptroller uses
     closeFactor: BigInt                     # factor used to determine repayAmount for liquidating
     liquidationIncentive: BigInt            # extra % liquidators save for liqudation a user
     maxAssets: BigInt                       # max assets a single user can enter
-    accrualBlockNumberSubgraph: Int!        # block number the market is updated to in the subgraph
 }
 
 type Market @entity {
@@ -19,7 +19,7 @@ type Market @entity {
 
     totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
     exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
-    totalReserves: BigDecimal!              # teserves accrue by shaving off a small percentage of all borrow interest
+    totalReserves: BigDecimal!              # reserves accrue by shaving off a small percentage of all borrow interest
     totalDeposits: BigDecimal               # the total lending of erc20 or eth given to this contract
     perBlockSupplyInterest: BigDecimal!     # PBSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate). Supply APR = PRSI * 2102400. Derived from borrow interest
 

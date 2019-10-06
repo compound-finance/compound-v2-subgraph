@@ -1,5 +1,4 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
-import { BigDecimal } from '@graphprotocol/graph-ts'
 import {
   Mint,
   Redeem,
@@ -50,11 +49,6 @@ export function handleMint(event: Mint): void {
     .plus(event.params.mintTokens.toBigDecimal().div(cTokenDecimalsBD))
     .truncate(market.underlyingDecimals)
 
-  // Get updated realized balance with the updated market exchange rate
-  cTokenStats.realizedLendBalance = market.exchangeRate
-    .times(cTokenStats.cTokenBalance)
-    .truncate(market.underlyingDecimals)
-
   cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied
     .plus(
       event.params.mintAmount
@@ -62,10 +56,6 @@ export function handleMint(event: Mint): void {
         .div(exponentToBigDecimal(market.underlyingDecimals)),
     )
     .truncate(market.underlyingDecimals)
-
-  cTokenStats.realizedSupplyInterest = cTokenStats.realizedLendBalance
-    .minus(cTokenStats.totalUnderlyingSupplied)
-    .plus(cTokenStats.totalUnderlyingRedeemed)
 
   cTokenStats.save()
 }
@@ -95,11 +85,6 @@ export function handleRedeem(event: Redeem): void {
     .minus(event.params.redeemTokens.toBigDecimal().div(cTokenDecimalsBD))
     .truncate(market.underlyingDecimals)
 
-  // Get updated realized balance with the updated market exchange rate
-  cTokenStats.realizedLendBalance = market.exchangeRate
-    .times(cTokenStats.cTokenBalance)
-    .truncate(market.underlyingDecimals)
-
   cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed
     .plus(
       event.params.redeemAmount
@@ -107,10 +92,6 @@ export function handleRedeem(event: Redeem): void {
         .div(exponentToBigDecimal(market.underlyingDecimals)),
     )
     .truncate(market.underlyingDecimals)
-
-  cTokenStats.realizedSupplyInterest = cTokenStats.realizedLendBalance
-    .minus(cTokenStats.totalUnderlyingSupplied)
-    .plus(cTokenStats.totalUnderlyingRedeemed)
 
   cTokenStats.save()
 
@@ -143,31 +124,11 @@ export function handleBorrow(event: Borrow): void {
   let borrowAmountBD = event.params.borrowAmount
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
-  let previousBorrowBalanceWithInterest: BigDecimal
-
-  if (cTokenStats.realizedBorrowBalance == BigDecimal.fromString('0')) {
-    previousBorrowBalanceWithInterest = BigDecimal.fromString('0')
-  } else {
-    previousBorrowBalanceWithInterest = cTokenStats.realizedBorrowBalance
-      .times(market.borrowIndex)
-      .div(cTokenStats.userBorrowIndex)
-      .truncate(market.underlyingDecimals)
-  }
-
-  cTokenStats.realizedBorrowBalance = previousBorrowBalanceWithInterest.plus(
-    borrowAmountBD,
-  )
-
+  cTokenStats.storedBorrowBalance = event.params.accountBorrows.toBigDecimal()
   cTokenStats.userBorrowIndex = market.borrowIndex
-
   cTokenStats.totalUnderlyingBorrowed = cTokenStats.totalUnderlyingBorrowed.plus(
     borrowAmountBD,
   )
-
-  cTokenStats.realizedBorrowInterest = cTokenStats.realizedBorrowBalance
-    .minus(cTokenStats.totalUnderlyingBorrowed)
-    .plus(cTokenStats.totalUnderlyingRepaid)
-
   cTokenStats.save()
 
   let user = User.load(userID)
@@ -205,31 +166,11 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   let repayAmountBD = event.params.repayAmount
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
-  let previousBorrowBalanceWithInterest: BigDecimal
-
-  if (cTokenStats.realizedBorrowBalance == BigDecimal.fromString('0')) {
-    previousBorrowBalanceWithInterest = BigDecimal.fromString('0')
-  } else {
-    previousBorrowBalanceWithInterest = cTokenStats.realizedBorrowBalance
-      .times(market.borrowIndex)
-      .div(cTokenStats.userBorrowIndex)
-      .truncate(market.underlyingDecimals)
-  }
-
-  cTokenStats.realizedBorrowBalance = previousBorrowBalanceWithInterest.minus(
-    repayAmountBD,
-  )
-
+  cTokenStats.storedBorrowBalance = event.params.accountBorrows.toBigDecimal()
   cTokenStats.userBorrowIndex = market.borrowIndex
-
   cTokenStats.totalUnderlyingRepaid = cTokenStats.totalUnderlyingRepaid.plus(
     repayAmountBD,
   )
-
-  cTokenStats.realizedBorrowInterest = cTokenStats.realizedBorrowBalance
-    .minus(cTokenStats.totalUnderlyingBorrowed)
-    .plus(cTokenStats.totalUnderlyingRepaid)
-
   cTokenStats.save()
 
   let user = User.load(userID)
@@ -305,6 +246,7 @@ export function handleTransfer(event: Transfer): void {
     let amountWithDecimals = event.params.amount
       .toBigDecimal()
       .div(exponentToBigDecimal(market.underlyingDecimals))
+
     let amountUnderlying = market.exchangeRate
       .times(amountWithDecimals)
       .truncate(market.underlyingDecimals)
@@ -314,20 +256,9 @@ export function handleTransfer(event: Transfer): void {
       .div(cTokenDecimalsBD)
       .truncate(market.underlyingDecimals)
 
-    // Get updated realized balance with the updated market exchange rate
-    // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
-    cTokenStatsFrom.realizedLendBalance = market.exchangeRate.times(
-      cTokenStatsFrom.cTokenBalance.truncate(market.underlyingDecimals),
-    )
-
     cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
       amountUnderlying,
     )
-    cTokenStatsFrom.realizedSupplyInterest = cTokenStatsFrom.realizedLendBalance
-      .minus(cTokenStatsFrom.totalUnderlyingSupplied)
-      .plus(cTokenStatsFrom.totalUnderlyingRedeemed)
-      .minus(amountUnderlying)
-
     cTokenStatsFrom.save()
 
     /********** User To Updates Below **********/
@@ -353,19 +284,9 @@ export function handleTransfer(event: Transfer): void {
       .div(cTokenDecimalsBD)
       .truncate(market.underlyingDecimals)
 
-    // Get updated realized balance with the updated market exchange rate
-    // TODO, do I need to divide by mantissa 10^18 because of exchange rate? I do NOT believe so. Will confirm upon syncing
-    cTokenStatsFrom.realizedLendBalance = market.exchangeRate.times(
-      cTokenStatsFrom.cTokenBalance.truncate(market.underlyingDecimals),
-    )
-
     cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
       amountUnderlying,
     )
-    cTokenStatsTo.realizedSupplyInterest = cTokenStatsTo.realizedLendBalance
-      .minus(cTokenStatsTo.totalUnderlyingSupplied)
-      .plus(cTokenStatsTo.totalUnderlyingRedeemed)
-      .minus(amountUnderlying)
 
     cTokenStatsTo.save()
   }

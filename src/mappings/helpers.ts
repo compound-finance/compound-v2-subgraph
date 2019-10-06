@@ -39,10 +39,6 @@ export function createCTokenInfo(
   cTokenStats.userBorrowIndex = BigDecimal.fromString('0')
   cTokenStats.totalUnderlyingBorrowed = BigDecimal.fromString('0')
   cTokenStats.totalUnderlyingRepaid = BigDecimal.fromString('0')
-  cTokenStats.realizedLendBalance = BigDecimal.fromString('0')
-  cTokenStats.realizedSupplyInterest = BigDecimal.fromString('0')
-  cTokenStats.realizedBorrowBalance = BigDecimal.fromString('0')
-  cTokenStats.realizedBorrowInterest = BigDecimal.fromString('0')
   return cTokenStats
 }
 

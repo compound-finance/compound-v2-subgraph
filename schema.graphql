@@ -47,11 +47,6 @@ type User @entity {
 }
 
 # CToken stats for a single users borrow and supply of an asset
-# The following values are added by the JS Wrapper:
-    # unrealizedLendBalance
-    # unrealizedSupplyInterest
-    # unrealizedBorrowBalance
-    # unrealizedBorrowInterest
 type CTokenInfo @entity {
     id: ID!                                 # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     market: Market!                         # market
@@ -67,12 +62,13 @@ type CTokenInfo @entity {
     userBorrowIndex: BigDecimal!            # the value of the borrowIndex upon users last borrow interaction
     totalUnderlyingBorrowed: BigDecimal!    # total borrow, exclusive of interest (ERC20/ETH)
     totalUnderlyingRepaid: BigDecimal!      # total repaid (ERC20/ETH)
+    storedBorrowBalance: BigDecimal!       # The account borrows total emitted in Borrow or Repay events
 
-    ### these values are only up to date to the last event the user interacted with, and shouldn't be displayed in a dapp. Display unrealized values to users
-    ### realizedLendBalance and realizedBorrowBalance are what are stored in the smart contract
-    ### these are all in units of underlying token
-    realizedLendBalance: BigDecimal!        # realizedLendBalance =  cTokenBalance * market.exchangeRate
-    realizedSupplyInterest: BigDecimal!     # realizedSupplyInterest = realizedLendBalance - underlyingSupplied + underlyingRedeemed
-    realizedBorrowBalance: BigDecimal!      # realizedBorrowBalance = previousRealizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex
-    realizedBorrowInterest: BigDecimal!     # realizedBorrowInterest = realizedBorrowBalance - underlyingBorrowed + underlyingRepaid
+    # The following values are added by the JS Wrapper, and must be calculated with the most up
+    # to date values based on the block delta for market.exchangeRate and market.borrowIndex
+    # They do not need to be in the schema, but they will show up in the explorer playground
+        # lendBalance: BigDecimal!        # lendBalance =  cTokenBalance * market.exchangeRate
+        # supplyInterest: BigDecimal!     # supplyInterest = lendBalance - totalUnderlyingSupplied + totalUnderlyingRedeemed
+        # borrowBalance: BigDecimal!      # borrowBalance = storedAccountBorrows * market.borrowIndex / userBorrowIndex
+        # borrowInterest: BigDecimal!     # borrowInterest = borrowBalance - totalUnderlyingBorrowed + totalUnderlyingRepaid
 }

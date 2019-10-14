@@ -1,6 +1,5 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
-import { BigDecimal } from '@graphprotocol/graph-ts'
 import {
   MarketEntered,
   MarketExited,
@@ -12,26 +11,25 @@ import {
 } from '../types/comptroller/Comptroller'
 
 import { Market, Comptroller } from '../types/schema'
+import { mantissaFactorBD } from './helpers'
 
-// TODO - uncomment when i am not testing with just REP
 export function handleMarketEntered(event: MarketEntered): void {
-  // let id = event.params.cToken.toHexString()
-  // let market = Market.load(id)
-  // let previousUsers = market.usersEntered
-  // previousUsers.push(event.params.account)
-  // market.usersEntered = previousUsers
-  // market.save()
+  let id = event.params.cToken.toHexString()
+  let market = Market.load(id)
+  let previousUsers = market.usersEntered
+  previousUsers.push(event.params.account)
+  market.usersEntered = previousUsers
+  market.save()
 }
 
-// TODO - uncomment when i am not testing with just REP
 export function handleMarketExited(event: MarketExited): void {
-  // let id = event.params.cToken.toHexString()
-  // let market = Market.load(id)
-  // let previousUsers = market.usersEntered
-  // let i = previousUsers.indexOf(event.params.account)
-  // previousUsers.splice(i, 1)
-  // market.usersEntered = previousUsers
-  // market.save()
+  let id = event.params.cToken.toHexString()
+  let market = Market.load(id)
+  let previousUsers = market.usersEntered
+  let i = previousUsers.indexOf(event.params.account)
+  previousUsers.splice(i, 1)
+  market.usersEntered = previousUsers
+  market.save()
 }
 
 export function handleNewCloseFactor(event: NewCloseFactor): void {
@@ -40,14 +38,15 @@ export function handleNewCloseFactor(event: NewCloseFactor): void {
   comptroller.save()
 }
 
-// TODO - uncomment when i am not testing with just REP
 export function handleNewCollateralFactor(event: NewCollateralFactor): void {
-  // let market = Market.load(event.params.cToken.toHexString())
-  // market.collateralFactor = event.params.newCollateralFactorMantissa as BigDecimal
-  // market.save()
+  let market = Market.load(event.params.cToken.toHexString())
+  market.collateralFactor = event.params.newCollateralFactorMantissa
+    .toBigDecimal()
+    .div(mantissaFactorBD)
+  market.save()
 }
 
-// This should still be the first event.... weird
+// This should be the first event acccording to etherscan but it isn't.... price oracle is. weird
 export function handleNewLiquidationIncentive(event: NewLiquidationIncentive): void {
   let comptroller = Comptroller.load('1')
   comptroller.liquidationIncentive = event.params.newLiquidationIncentiveMantissa

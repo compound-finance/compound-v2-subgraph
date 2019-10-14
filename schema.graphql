@@ -1,3 +1,4 @@
+# TODO - add in comments for all the fields, so they show up in the explorer
 type Comptroller @entity {
     id: ID!                                 # 1
     priceOracle: Bytes                      # price oracle address that comptroller uses
@@ -11,13 +12,14 @@ type Market @entity {
     underlyingAddress: Bytes!               # underlying token address (eth is 0x0000)
     underlyingDecimals: Int!                # undelying decimals
     symbol: String!                         # cDAI, cBAT, etc.
-    accrualBlockNumber: Int!                # block number the market is updated to
+    accrualBlockNumber: Int!                # block number the market is updated to on ethereum
     tokenPerEthRatio: BigDecimal!           # 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
     tokenPerUSDRatio: BigDecimal!           # 19 would mean 1 REP = 19 USD
+    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
 
     totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
     exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
-    totalReserves: BigDecimal!              # teserves accrue by shaving off a small percentage of all borrow interest
+    totalReserves: BigDecimal!              # reserves accrue by shaving off a small percentage of all borrow interest
     totalDeposits: BigDecimal               # the total lending of erc20 or eth given to this contract
     perBlockSupplyInterest: BigDecimal!     # PBSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate). Supply APR = PRSI * 2102400. Derived from borrow interest
 
@@ -25,8 +27,6 @@ type Market @entity {
     totalBorrows: BigDecimal!               # total borrows for the market
     perBlockBorrowInterest: BigDecimal!     # to get Annual Percent Return (APR) : perBlockBorrowInterest * 2102400
     borrowIndex: BigDecimal!                # the history of the markets borrow index return since inception. (Think S&P 500)
-
-    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
 
     # Created by Comptroller events
     usersEntered: [Bytes!]!                 # users who have entered this market
@@ -47,11 +47,6 @@ type User @entity {
 }
 
 # CToken stats for a single users borrow and supply of an asset
-# The following values are added by the JS Wrapper:
-    # unrealizedLendBalance
-    # unrealizedSupplyInterest
-    # unrealizedBorrowBalance
-    # unrealizedBorrowInterest
 type CTokenInfo @entity {
     id: ID!                                 # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
     market: Market!                         # market
@@ -67,12 +62,13 @@ type CTokenInfo @entity {
     userBorrowIndex: BigDecimal!            # the value of the borrowIndex upon users last borrow interaction
     totalUnderlyingBorrowed: BigDecimal!    # total borrow, exclusive of interest (ERC20/ETH)
     totalUnderlyingRepaid: BigDecimal!      # total repaid (ERC20/ETH)
+    storedBorrowBalance: BigDecimal!       # The account borrows total emitted in Borrow or Repay events
 
-    ### these values are only up to date to the last event the user interacted with, and shouldn't be displayed in a dapp. Display unrealized values to users
-    ### realizedLendBalance and realizedBorrowBalance are what are stored in the smart contract
-    ### these are all in units of underlying token
-    realizedLendBalance: BigDecimal!        # realizedLendBalance =  cTokenBalance * market.exchangeRate
-    realizedSupplyInterest: BigDecimal!     # realizedSupplyInterest = realizedLendBalance - underlyingSupplied + underlyingRedeemed
-    realizedBorrowBalance: BigDecimal!      # realizedBorrowBalance = previousRealizedBorrowBalance * market.borrowIndexLatest / userBorrowIndex
-    realizedBorrowInterest: BigDecimal!     # realizedBorrowInterest = realizedBorrowBalance - underlyingBorrowed + underlyingRepaid
+    # The following values are added by the JS Wrapper, and must be calculated with the most up
+    # to date values based on the block delta for market.exchangeRate and market.borrowIndex
+    # They do not need to be in the schema, but they will show up in the explorer playground
+        # lendBalance: BigDecimal!        # lendBalance =  cTokenBalance * market.exchangeRate
+        # supplyInterest: BigDecimal!     # supplyInterest = lendBalance - totalUnderlyingSupplied + totalUnderlyingRedeemed
+        # borrowBalance: BigDecimal!      # borrowBalance = storedAccountBorrows * market.borrowIndex / userBorrowIndex
+        # borrowInterest: BigDecimal!     # borrowInterest = borrowBalance - totalUnderlyingBorrowed + totalUnderlyingRepaid
 }

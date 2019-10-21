@@ -39,16 +39,17 @@ export function createCTokenInfo(
   cTokenStats.userBorrowIndex = BigDecimal.fromString('0')
   cTokenStats.totalUnderlyingBorrowed = BigDecimal.fromString('0')
   cTokenStats.totalUnderlyingRepaid = BigDecimal.fromString('0')
+  cTokenStats.storedBorrowBalance = BigDecimal.fromString('0')
   return cTokenStats
 }
 
 export function createUser(userID: string): User {
   let user = new User(userID)
-  user.cTokens = []
+  // user.cTokens = []
   user.countLiquidated = 0
   user.countLiquidator = 0
-  user.totalBorrowInEth = BigDecimal.fromString('0')
-  user.totalSupplyInEth = BigDecimal.fromString('0')
+  // user.totalBorrowInEth = BigDecimal.fromString('0')
+  // user.totalSupplyInEth = BigDecimal.fromString('0')
   user.hasBorrowed = false
   user.save()
   return user

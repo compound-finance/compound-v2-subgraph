@@ -216,11 +216,12 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
 
   // TODO make the below more robust. technically if it fails, we can calculate
   //  on our side the value , since supply rate is a derivative of borrow
-  let testing = contract.try_supplyRatePerBlock()
-  if (testing.reverted) {
+  let supplyRatePerBlock = contract.try_supplyRatePerBlock()
+  if (supplyRatePerBlock.reverted) {
     log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])
+    market.perBlockSupplyInterest = BigDecimal.fromString('0')
   } else {
-    market.perBlockSupplyInterest = testing.value
+    market.perBlockSupplyInterest = supplyRatePerBlock.value
       .toBigDecimal()
       .div(mantissaFactorBD)
       .truncate(mantissaFactor)

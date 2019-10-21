@@ -39,8 +39,8 @@ type Market @entity {
 type User @entity {
     id: ID!                                                 # user eth address
     cTokens: [CTokenInfo!]! @derivedFrom(field: "user")     # array of CTokenInfo for user
-    totalSupplyInEth: BigDecimal!                           # total assets supplied by user
-    totalBorrowInEth: BigDecimal!                           # total assets borrowed from user
+#    totalSupplyInEth: BigDecimal!                           # total assets supplied by user
+#    totalBorrowInEth: BigDecimal!                           # total assets borrowed from user
     countLiquidated: Int!                                   # times this account has been liquidated
     countLiquidator: Int!                                   # times this account has liquidated others
     hasBorrowed: Boolean!                                   # true if user has ever borrowed

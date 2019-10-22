@@ -107,28 +107,26 @@ export function createMarket(marketAddress: string): Market {
   // It is CETH, which has a slightly different interface
   if (marketAddress == cETHAddress) {
     market = new Market(marketAddress)
-    market.symbol = contract.symbol()
-    market.usersEntered = []
     market.underlyingAddress = Address.fromString(
       '0x0000000000000000000000000000000000000000',
     )
     market.underlyingDecimals = 18
-    market.reserveFactor = BigInt.fromI32(0)
     market.tokenPerEthRatio = BigDecimal.fromString('1')
 
     // It is all other CERC20 contracts
   } else {
     market = new Market(marketAddress)
-    market.symbol = contract.symbol()
-    market.usersEntered = []
     market.underlyingAddress = contract.underlying()
     let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
     market.underlyingDecimals = underlyingContract.decimals()
-    market.reserveFactor = BigInt.fromI32(0)
     if (marketAddress == cUSDCAddress) {
       market.tokenPerUSDRatio = BigDecimal.fromString('1')
     }
   }
+  market.symbol = contract.symbol()
+  market.usersEntered = []
+  market.reserveFactor = BigInt.fromI32(0)
+  market.accrualBlockNumber = 0
   return market
 }
 
@@ -138,94 +136,98 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
   if (market == null) {
     market = createMarket(marketID)
   }
-  let contractAddress = Address.fromString(market.id)
-  let contract = CToken.bind(contractAddress)
-  let usdPriceInEth = getUSDCpriceETH(blockNumber)
 
-  // if cETH, we only update USD price
-  if (market.id == cETHAddress) {
-    market.tokenPerUSDRatio = market.tokenPerEthRatio
-      .div(usdPriceInEth)
-      .truncate(market.underlyingDecimals)
-  } else {
-    let tokenPriceEth = getTokenPrice(
-      blockNumber,
-      contractAddress,
-      market.underlyingAddress as Address,
-      market.underlyingDecimals,
-    )
-    market.tokenPerEthRatio = tokenPriceEth.truncate(market.underlyingDecimals)
-    // if USDC, we only update ETH price
-    if (market.id != cUSDCAddress) {
+  // Only updateMarket if it has not been updated this block
+  if (market.accrualBlockNumber != blockNumber) {
+    let contractAddress = Address.fromString(market.id)
+    let contract = CToken.bind(contractAddress)
+    let usdPriceInEth = getUSDCpriceETH(blockNumber)
+
+    // if cETH, we only update USD price
+    if (market.id == cETHAddress) {
       market.tokenPerUSDRatio = market.tokenPerEthRatio
         .div(usdPriceInEth)
         .truncate(market.underlyingDecimals)
+    } else {
+      let tokenPriceEth = getTokenPrice(
+        blockNumber,
+        contractAddress,
+        market.underlyingAddress as Address,
+        market.underlyingDecimals,
+      )
+      market.tokenPerEthRatio = tokenPriceEth.truncate(market.underlyingDecimals)
+      // if USDC, we only update ETH price
+      if (market.id != cUSDCAddress) {
+        market.tokenPerUSDRatio = market.tokenPerEthRatio
+          .div(usdPriceInEth)
+          .truncate(market.underlyingDecimals)
+      }
     }
-  }
 
-  market.accrualBlockNumber = contract.accrualBlockNumber().toI32()
-  market.totalSupply = contract
-    .totalSupply()
-    .toBigDecimal()
-    .div(cTokenDecimalsBD)
+    market.accrualBlockNumber = contract.accrualBlockNumber().toI32()
+    market.totalSupply = contract
+      .totalSupply()
+      .toBigDecimal()
+      .div(cTokenDecimalsBD)
 
-  // If you call the cDAI contract on etherscan it comes back (2.0 * 10^26)
-  // If you call the cUSDC contract on etherscan it comes back (2.0 * 10^14)
-  // The real value is 0.02. So cDAI is off by 10^28, and cUSDC 10^16
-  // Must div by tokenDecimals, 10^market.underlyingDecimals
-  // Must multiple by ctokenDecimals, 10^8
-  // Must div by mantissa, 10^18
-  market.exchangeRate = contract
-    .exchangeRateStored()
-    .toBigDecimal()
-    .div(exponentToBigDecimal(market.underlyingDecimals))
-    .times(cTokenDecimalsBD)
-    .div(mantissaFactorBD)
-    .truncate(mantissaFactor)
-  market.borrowIndex = contract
-    .borrowIndex()
-    .toBigDecimal()
-    .div(mantissaFactorBD)
-    .truncate(mantissaFactor)
-
-  market.totalReserves = contract
-    .totalReserves()
-    .toBigDecimal()
-    .div(exponentToBigDecimal(market.underlyingDecimals))
-    .truncate(market.underlyingDecimals)
-  market.totalBorrows = contract
-    .totalBorrows()
-    .toBigDecimal()
-    .div(exponentToBigDecimal(market.underlyingDecimals))
-    .truncate(market.underlyingDecimals)
-  market.totalCash = contract
-    .getCash()
-    .toBigDecimal()
-    .div(exponentToBigDecimal(market.underlyingDecimals))
-    .truncate(market.underlyingDecimals)
-  market.totalDeposits = market.totalCash
-    .plus(market.totalBorrows)
-    .minus(market.totalReserves)
-
-  // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
-  market.perBlockBorrowInterest = contract
-    .borrowRatePerBlock()
-    .toBigDecimal()
-    .div(mantissaFactorBD)
-    .truncate(mantissaFactor)
-
-  // TODO make the below more robust. technically if it fails, we can calculate
-  //  on our side the value , since supply rate is a derivative of borrow
-  let supplyRatePerBlock = contract.try_supplyRatePerBlock()
-  if (supplyRatePerBlock.reverted) {
-    log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])
-    market.perBlockSupplyInterest = BigDecimal.fromString('0')
-  } else {
-    market.perBlockSupplyInterest = supplyRatePerBlock.value
+    // If you call the cDAI contract on etherscan it comes back (2.0 * 10^26)
+    // If you call the cUSDC contract on etherscan it comes back (2.0 * 10^14)
+    // The real value is 0.02. So cDAI is off by 10^28, and cUSDC 10^16
+    // Must div by tokenDecimals, 10^market.underlyingDecimals
+    // Must multiple by ctokenDecimals, 10^8
+    // Must div by mantissa, 10^18
+    market.exchangeRate = contract
+      .exchangeRateStored()
+      .toBigDecimal()
+      .div(exponentToBigDecimal(market.underlyingDecimals))
+      .times(cTokenDecimalsBD)
+      .div(mantissaFactorBD)
+      .truncate(mantissaFactor)
+    market.borrowIndex = contract
+      .borrowIndex()
       .toBigDecimal()
       .div(mantissaFactorBD)
       .truncate(mantissaFactor)
+
+    market.totalReserves = contract
+      .totalReserves()
+      .toBigDecimal()
+      .div(exponentToBigDecimal(market.underlyingDecimals))
+      .truncate(market.underlyingDecimals)
+    market.totalBorrows = contract
+      .totalBorrows()
+      .toBigDecimal()
+      .div(exponentToBigDecimal(market.underlyingDecimals))
+      .truncate(market.underlyingDecimals)
+    market.totalCash = contract
+      .getCash()
+      .toBigDecimal()
+      .div(exponentToBigDecimal(market.underlyingDecimals))
+      .truncate(market.underlyingDecimals)
+    market.totalDeposits = market.totalCash
+      .plus(market.totalBorrows)
+      .minus(market.totalReserves)
+
+    // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
+    market.perBlockBorrowInterest = contract
+      .borrowRatePerBlock()
+      .toBigDecimal()
+      .div(mantissaFactorBD)
+      .truncate(mantissaFactor)
+
+    // TODO make the below more robust. technically if it fails, we can calculate
+    //  on our side the value , since supply rate is a derivative of borrow
+    let supplyRatePerBlock = contract.try_supplyRatePerBlock()
+    if (supplyRatePerBlock.reverted) {
+      log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])
+      market.perBlockSupplyInterest = BigDecimal.fromString('0')
+    } else {
+      market.perBlockSupplyInterest = supplyRatePerBlock.value
+        .toBigDecimal()
+        .div(mantissaFactorBD)
+        .truncate(mantissaFactor)
+    }
+    market.save()
   }
-  market.save()
   return market as Market
 }

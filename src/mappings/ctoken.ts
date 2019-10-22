@@ -9,7 +9,7 @@ import {
   AccrueInterest,
   NewReserveFactor,
 } from '../types/cREP/CToken'
-import { Market, User } from '../types/schema'
+import { CTokenInfo, Market, User } from '../types/schema'
 
 import { updateMarket } from './markets'
 import {
@@ -17,9 +17,12 @@ import {
   updateCommonCTokenStats,
   exponentToBigDecimal,
   cTokenDecimalsBD,
+  createCTokenInfo,
 } from './helpers'
 
 //TODO handle transfers from the cBAT accounts. They should not have negative balances
+// TODO - ctokenStats is not a good name. It involves borrowing and ctokens. Borrowing is only
+//  underlying assets. marketStats is more accurate. but still, it needs to match compounds api
 
 /*  User supplies assets into market and receives cTokens in exchange
  *  Transfer event always also gets emitted. Leave cTokens state change to that event
@@ -38,16 +41,21 @@ export function handleMint(event: Mint): void {
     createUser(userID)
   }
 
-  // Update cTokenStats common for all events, and return the stats to update unique
-  // values for each event
-  let cTokenStats = updateCommonCTokenStats(
-    market.id,
-    market.symbol,
-    userID,
-    event.transaction.hash,
-    event.block.timestamp.toI32(),
-    event.block.number.toI32(),
-  )
+  let cTokenStatsID = market.id.concat('-').concat(userID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
+  if (cTokenStats == null) {
+    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, userID, market.id)
+  }
+
+  // Not needed, transfer will update this
+  // let cTokenStats = updateCommonCTokenStats(
+  //   market.id,
+  //   market.symbol,
+  //   userID,
+  //   event.transaction.hash,
+  //   event.block.timestamp.toI32(),
+  //   event.block.number.toI32(),
+  // )
 
   // cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
   //   .plus(event.params.mintTokens.toBigDecimal().div(cTokenDecimalsBD))
@@ -76,19 +84,22 @@ export function handleRedeem(event: Redeem): void {
   // let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.redeemer.toHex()
 
-  // Update cTokenStats common for all events, and return the stats to update unique
-  // values for each event
-  let cTokenStats = updateCommonCTokenStats(
-    market.id,
-    market.symbol,
-    userID,
-    event.transaction.hash,
-    event.block.timestamp.toI32(),
-    event.block.number.toI32(),
-  )
+  let cTokenStatsID = market.id.concat('-').concat(userID)
+  let cTokenStats = CTokenInfo.load(cTokenStatsID)
+  if (cTokenStats == null) {
+    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, userID, market.id)
+  }
 
-  // TODO - I BELIEVE IT IS BRORKEN HERE. redeem() emits both a transfer and a rredeem event, in which case i am minusing twice!!!
-  // TODO SO DOES MINT!!!
+  // Not needed, transfer will update this
+  // let cTokenStats = updateCommonCTokenStats(
+  //   market.id,
+  //   market.symbol,
+  //   userID,
+  //   event.transaction.hash,
+  //   event.block.timestamp.toI32(),
+  //   event.block.number.toI32(),
+  // )
+
   // cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
   //   .minus(event.params.redeemTokens.toBigDecimal().div(cTokenDecimalsBD))
   //   .truncate(market.underlyingDecimals)
@@ -240,73 +251,73 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 // TODO - we arrre going to get duplicate tx hashes and tx times now, cuz of the duplicate events . prob just remove it from mint and redeem etc.
 export function handleTransfer(event: Transfer): void {
   // We only updateMarket() if accrual block number is not up to date. This will only happen
-  // with normal transfers, since mint, redeem, and seize transferrs will already run updateMarket()
+  // with normal transfers, since mint, redeem, and seize transfers will already run updateMarket()
   let market = Market.load(event.address.toHexString())
   if (market.accrualBlockNumber != event.block.number.toI32()) {
     market = updateMarket(event.address, event.block.number.toI32())
   }
+
+  // User From
   let userFromID = event.params.from.toHex()
   let userFrom = User.load(userFromID)
   if (userFrom == null) {
     createUser(userFromID)
-    // Update cTokenStats common for all events, and return the stats to update unique
-    // values for each event
-    let cTokenStatsFrom = updateCommonCTokenStats(
-      market.id,
-      market.symbol,
-      userFromID,
-      event.transaction.hash,
-      event.block.timestamp.toI32(),
-      event.block.number.toI32(),
-    )
-
-    let amountWithDecimals = event.params.amount
-      .toBigDecimal()
-      .div(exponentToBigDecimal(market.underlyingDecimals))
-
-    let amountUnderlying = market.exchangeRate
-      .times(amountWithDecimals)
-      .truncate(market.underlyingDecimals)
-
-    cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance
-      .minus(event.params.amount.toBigDecimal())
-      .div(cTokenDecimalsBD)
-      .truncate(market.underlyingDecimals)
-
-    cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
-      amountUnderlying,
-    )
-    cTokenStatsFrom.save()
-
-    /********** User To Updates Below **********/
-    // We do the same for userTo as userFrom, but check if user and cTokenStats entities are null
-    let userToID = event.params.to.toHex()
-    let userTo = User.load(userToID)
-    if (userTo == null) {
-      createUser(userToID)
-    }
-    // Update cTokenStats common for all events, and return the stats to update unique
-    // values for each event
-    let cTokenStatsTo = updateCommonCTokenStats(
-      market.id,
-      market.symbol,
-      userToID,
-      event.transaction.hash,
-      event.block.timestamp.toI32(),
-      event.block.number.toI32(),
-    )
-
-    cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance
-      .plus(event.params.amount.toBigDecimal())
-      .div(cTokenDecimalsBD)
-      .truncate(market.underlyingDecimals)
-
-    cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
-      amountUnderlying,
-    )
-
-    cTokenStatsTo.save()
   }
+  // Update cTokenStats common for all events, and return the stats to update unique
+  // values for each event
+  let cTokenStatsFrom = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userFromID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
+
+  let amountWithDecimals = event.params.amount
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+
+  let amountUnderlying = market.exchangeRate
+    .times(amountWithDecimals)
+    .truncate(market.underlyingDecimals)
+
+  cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance
+    .minus(event.params.amount.toBigDecimal())
+    .div(cTokenDecimalsBD)
+    .truncate(market.underlyingDecimals)
+
+  cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
+    amountUnderlying,
+  )
+  cTokenStatsFrom.save()
+
+  // User To
+  let userToID = event.params.to.toHex()
+  let userTo = User.load(userToID)
+  if (userTo == null) {
+    createUser(userToID)
+  }
+  // Update cTokenStats common for all events, and return the stats to update unique
+  // values for each event
+  let cTokenStatsTo = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userToID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
+
+  cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance
+    .plus(event.params.amount.toBigDecimal())
+    .div(cTokenDecimalsBD)
+    .truncate(market.underlyingDecimals)
+
+  cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
+    amountUnderlying,
+  )
+  cTokenStatsTo.save()
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {

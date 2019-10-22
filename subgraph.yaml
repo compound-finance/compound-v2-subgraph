@@ -44,6 +44,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: cDAI
     network: mainnet
@@ -84,6 +86,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: cETH
     network: mainnet
@@ -122,6 +126,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: cREP
     network: mainnet
@@ -162,6 +168,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: cUSDC
     network: mainnet
@@ -202,6 +210,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: cWBTC
     network: mainnet
@@ -242,6 +252,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: cZRX
     network: mainnet
@@ -282,6 +294,8 @@ dataSources:
           handler: handleAccrueInterest
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
   - kind: ethereum/contract
     name: Comptroller
     network: mainnet

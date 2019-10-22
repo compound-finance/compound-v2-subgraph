@@ -19,6 +19,8 @@ import {
   cTokenDecimalsBD,
 } from './helpers'
 
+//TODO handle transfers from the cBAT accounts. They should not have negative balances
+
 /*  User supplies assets into market and receives cTokens in exchange
  *  Transfer event always also gets emitted. Leave cTokens state change to that event
  *  event.mintAmount is the underlying asset
@@ -27,7 +29,9 @@ import {
  *  note - mints  originate from the cToken address, not 0x000000, which is typical of ERC-20s
  */
 export function handleMint(event: Mint): void {
-  let market = updateMarket(event.address, event.block.number.toI32())
+  // No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
+  let market = Market.load(event.address.toHexString())
+  // let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.minter.toHex()
   let user = User.load(userID)
   if (user == null) {
@@ -45,9 +49,9 @@ export function handleMint(event: Mint): void {
     event.block.number.toI32(),
   )
 
-  cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
-    .plus(event.params.mintTokens.toBigDecimal().div(cTokenDecimalsBD))
-    .truncate(market.underlyingDecimals)
+  // cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
+  //   .plus(event.params.mintTokens.toBigDecimal().div(cTokenDecimalsBD))
+  //   .truncate(market.underlyingDecimals)
 
   cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied
     .plus(
@@ -67,7 +71,9 @@ export function handleMint(event: Mint): void {
  *  event.redeemer is the user
  */
 export function handleRedeem(event: Redeem): void {
-  let market = updateMarket(event.address, event.block.number.toI32())
+  // No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
+  let market = Market.load(event.address.toHexString())
+  // let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.redeemer.toHex()
 
   // Update cTokenStats common for all events, and return the stats to update unique
@@ -81,9 +87,11 @@ export function handleRedeem(event: Redeem): void {
     event.block.number.toI32(),
   )
 
-  cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
-    .minus(event.params.redeemTokens.toBigDecimal().div(cTokenDecimalsBD))
-    .truncate(market.underlyingDecimals)
+  // TODO - I BELIEVE IT IS BRORKEN HERE. redeem() emits both a transfer and a rredeem event, in which case i am minusing twice!!!
+  // TODO SO DOES MINT!!!
+  // cTokenStats.cTokenBalance = cTokenStats.cTokenBalance
+  //   .minus(event.params.redeemTokens.toBigDecimal().div(cTokenDecimalsBD))
+  //   .truncate(market.underlyingDecimals)
 
   cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed
     .plus(
@@ -108,7 +116,9 @@ export function handleRedeem(event: Redeem): void {
  * event.params.borrower = the user
  */
 export function handleBorrow(event: Borrow): void {
-  let market = updateMarket(event.address, event.block.number.toI32())
+  // No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
+  let market = Market.load(event.address.toHexString())
+  // let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.borrower.toHex()
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
@@ -150,7 +160,9 @@ export function handleBorrow(event: Borrow): void {
  * event.params.payer = the payer
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
-  let market = updateMarket(event.address, event.block.number.toI32())
+  // No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
+  let market = Market.load(event.address.toHexString())
+  // let market = updateMarket(event.address, event.block.number.toI32())
   let userID = event.params.borrower.toHex()
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
@@ -193,7 +205,8 @@ export function handleRepayBorrow(event: RepayBorrow): void {
  */
 
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
-  updateMarket(event.address, event.block.number.toI32())
+  // No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
+  // updateMarket(event.address, event.block.number.toI32())
   let liquidatorID = event.params.liquidator.toHex()
   let liquidator = User.load(liquidatorID)
   if (liquidator == null) {
@@ -212,23 +225,27 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 }
 
 /* Possible ways to emit Transfer:
- *    seize() - i.e. a Liquidation Transfer
+ *    seize() - i.e. a Liquidation Transfer (does not emit anything else)
  *    redeemFresh() - i.e. redeeming your cTokens for underlying asset
  *    mintFresh() - i.e. you are lending underlying assets to create ctokens
  *    transfer() - i.e. a basic transfer
- * This function handles all 4 cases, since duplicate data is emitted in the back-to-back transfer
- * The simplest way to do this is call getAccountSnapshot, in here, and leave out any cTokenBalance
- * calculations in the other function. This way we never add or subtract and deviate from the true
- * value stored in the smart contract
+ * This function handles all 4 cases, since duplicate data is emitted in the transfer event, as well
+ * as the mint, redeem, and seize events. So for those events, we do not update cToken balances.
  *
  * event.params.from = sender of cTokens
  * event.params.to = receiver of cTokens
  * event.params.amount = amount sent
  */
+
+// TODO - we arrre going to get duplicate tx hashes and tx times now, cuz of the duplicate events . prob just remove it from mint and redeem etc.
 export function handleTransfer(event: Transfer): void {
-  let market = updateMarket(event.address, event.block.number.toI32())
+  // We only updateMarket() if accrual block number is not up to date. This will only happen
+  // with normal transfers, since mint, redeem, and seize transferrs will already run updateMarket()
+  let market = Market.load(event.address.toHexString())
+  if (market.accrualBlockNumber != event.block.number.toI32()) {
+    market = updateMarket(event.address, event.block.number.toI32())
+  }
   let userFromID = event.params.from.toHex()
-  // TODO - hmm, this seems impossible to happen, should i still keep it? i remember an edge case liek this from the past
   let userFrom = User.load(userFromID)
   if (userFrom == null) {
     createUser(userFromID)

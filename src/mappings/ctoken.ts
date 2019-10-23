@@ -8,10 +8,11 @@ import {
   Transfer,
   AccrueInterest,
   NewReserveFactor,
+  NewMarketInterestRateModel,
 } from '../types/cREP/CToken'
 import { CTokenInfo, Market, User } from '../types/schema'
 
-import { updateMarket } from './markets'
+import { createMarket, updateMarket } from './markets'
 import {
   createUser,
   updateCommonCTokenStats,
@@ -316,5 +317,17 @@ export function handleNewReserveFactor(event: NewReserveFactor): void {
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
   market.reserveFactor = event.params.newReserveFactorMantissa
+  market.save()
+}
+
+export function handleNewMarketInterestRateModel(
+  event: NewMarketInterestRateModel,
+): void {
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  if (market == null) {
+    market = createMarket(marketID)
+  }
+  market.interestRateModelAddress = event.params.newInterestRateModel
   market.save()
 }

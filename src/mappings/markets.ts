@@ -104,6 +104,7 @@ function getUSDCpriceETH(blockNumber: i32): BigDecimal {
 export function createMarket(marketAddress: string): Market {
   let market: Market
   let contract = CToken.bind(Address.fromString(marketAddress))
+
   // It is CETH, which has a slightly different interface
   if (marketAddress == cETHAddress) {
     market = new Market(marketAddress)
@@ -123,10 +124,27 @@ export function createMarket(marketAddress: string): Market {
       market.tokenPerUSDRatio = BigDecimal.fromString('1')
     }
   }
+
   market.symbol = contract.symbol()
-  market.usersEntered = []
-  market.reserveFactor = BigInt.fromI32(0)
   market.accrualBlockNumber = 0
+  market.tokenPerEthRatio = BigDecimal.fromString('0')
+  market.tokenPerUSDRatio = BigDecimal.fromString('0')
+  market.reserveFactor = BigInt.fromI32(0)
+  market.interestRateModelAddress = Address.fromString(
+    '0x0000000000000000000000000000000000000000',
+  )
+  market.totalSupply = BigDecimal.fromString('0')
+  market.exchangeRate = BigDecimal.fromString('0')
+  market.totalReserves = BigDecimal.fromString('0')
+  market.totalDeposits = BigDecimal.fromString('0')
+  market.supplyRate = BigDecimal.fromString('0')
+  market.totalCash = BigDecimal.fromString('0')
+  market.totalBorrows = BigDecimal.fromString('0')
+  market.borrowRate = BigDecimal.fromString('0')
+  market.borrowIndex = BigDecimal.fromString('0')
+  market.usersEntered = []
+  market.collateralFactor = BigDecimal.fromString('0')
+
   return market
 }
 
@@ -176,6 +194,7 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
     // Must div by tokenDecimals, 10^market.underlyingDecimals
     // Must multiple by ctokenDecimals, 10^8
     // Must div by mantissa, 10^18
+
     market.exchangeRate = contract
       .exchangeRateStored()
       .toBigDecimal()
@@ -209,9 +228,10 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
       .minus(market.totalReserves)
 
     // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
-    market.perBlockBorrowInterest = contract
+    market.supplyRate = contract
       .borrowRatePerBlock()
       .toBigDecimal()
+      .times(BigDecimal.fromString('2102400'))
       .div(mantissaFactorBD)
       .truncate(mantissaFactor)
 
@@ -220,10 +240,11 @@ export function updateMarket(marketAddress: Address, blockNumber: i32): Market {
     let supplyRatePerBlock = contract.try_supplyRatePerBlock()
     if (supplyRatePerBlock.reverted) {
       log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])
-      market.perBlockSupplyInterest = BigDecimal.fromString('0')
+      market.borrowRate = BigDecimal.fromString('0')
     } else {
-      market.perBlockSupplyInterest = supplyRatePerBlock.value
+      market.borrowRate = supplyRatePerBlock.value
         .toBigDecimal()
+        .times(BigDecimal.fromString('2102400'))
         .div(mantissaFactorBD)
         .truncate(mantissaFactor)
     }

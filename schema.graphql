@@ -7,6 +7,7 @@ type Comptroller @entity {
     maxAssets: BigInt                       # max assets a single user can enter
 }
 
+# Market inforamtion for a CToken
 type Market @entity {
     id: ID!                                 # cToken Address
     underlyingAddress: Bytes!               # underlying token address (eth is 0x0000)
@@ -16,16 +17,17 @@ type Market @entity {
     tokenPerEthRatio: BigDecimal!           # 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
     tokenPerUSDRatio: BigDecimal!           # 19 would mean 1 REP = 19 USD
     reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
+    interestRateModelAddress: Bytes!        # Address of the interest rate model
 
     totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
     exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
     totalReserves: BigDecimal!              # reserves accrue by shaving off a small percentage of all borrow interest
     totalDeposits: BigDecimal               # the total lending of erc20 or eth given to this contract
-    perBlockSupplyInterest: BigDecimal!     # PBSI = totalBorrows * borrowRatePerBock * (1-reserveFactor) / (totalSupply * exchangeRate). Supply APR = PRSI * 2102400. Derived from borrow interest
+    supplyRate: BigDecimal!                 # to get the per block rate, divide by 2102400
 
     totalCash: BigDecimal                   # the contracts balance of ERC20 or ETH
     totalBorrows: BigDecimal!               # total borrows for the market
-    perBlockBorrowInterest: BigDecimal!     # to get Annual Percent Return (APR) : perBlockBorrowInterest * 2102400
+    borrowRate: BigDecimal!                 # to get the per block rate, divide by 2102400
     borrowIndex: BigDecimal!                # the history of the markets borrow index return since inception. (Think S&P 500)
 
     # Created by Comptroller events
@@ -33,17 +35,20 @@ type Market @entity {
     collateralFactor: BigDecimal            # factor for the most one can borrow in this market
 }
 
-# the following vaules are added by the JS wrapper: (TODO - still needs to be implemented)
-    # accountLiquidity
-    # availableToBorrowEth
+# All data for a user interacting with the protocol
 type User @entity {
     id: ID!                                                 # user eth address
     cTokens: [CTokenInfo!]! @derivedFrom(field: "user")     # array of CTokenInfo for user
-#    totalSupplyInEth: BigDecimal!                           # total assets supplied by user
-#    totalBorrowInEth: BigDecimal!                           # total assets borrowed from user
     countLiquidated: Int!                                   # times this account has been liquidated
     countLiquidator: Int!                                   # times this account has liquidated others
     hasBorrowed: Boolean!                                   # true if user has ever borrowed
+
+    # The following values are added by the JS Wrapper, and must be calculated with the most up
+    # to date values based on the block delta for market.exchangeRate and market.borrowIndex
+    # They do not need to be in the schema, but they will show up in the explorer playground
+    #    health: BigDecimal!                                     # If less than 1, the account can be liquidated
+    #    total_borrow_value_in_eth: BigDecimal!                  # total assets supplied by user
+    #    tota_collateral_value_in_eth: BigDecimal!               # total assets borrowed from user
 }
 
 # CToken stats for a single users borrow and supply of an asset

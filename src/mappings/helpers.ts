@@ -45,11 +45,8 @@ export function createCTokenInfo(
 
 export function createUser(userID: string): User {
   let user = new User(userID)
-  // user.cTokens = []
   user.countLiquidated = 0
   user.countLiquidator = 0
-  // user.totalBorrowInEth = BigDecimal.fromString('0')
-  // user.totalSupplyInEth = BigDecimal.fromString('0')
   user.hasBorrowed = false
   user.save()
   return user

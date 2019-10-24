@@ -8,31 +8,34 @@ type Comptroller @entity {
 }
 
 # Market inforamtion for a CToken
-type Market @entity {
-    id: ID!                                 # cToken Address
-    underlyingAddress: Bytes!               # underlying token address (eth is 0x0000)
-    underlyingDecimals: Int!                # undelying decimals
-    symbol: String!                         # cDAI, cBAT, etc.
-    accrualBlockNumber: Int!                # block number the market is updated to on ethereum
-    tokenPerEthRatio: BigDecimal!           # 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
-    tokenPerUSDRatio: BigDecimal!           # 19 would mean 1 REP = 19 USD
-    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
-    interestRateModelAddress: Bytes!        # Address of the interest rate model
-
-    totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
-    exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
-    totalReserves: BigDecimal!              # reserves accrue by shaving off a small percentage of all borrow interest
-    totalDeposits: BigDecimal               # the total lending of erc20 or eth given to this contract
-    supplyRate: BigDecimal!                 # to get the per block rate, divide by 2102400
-
-    totalCash: BigDecimal                   # the contracts balance of ERC20 or ETH
-    totalBorrows: BigDecimal!               # total borrows for the market
+type Market @entity { # TODO rename to CToken, not market
+    #Fields from compounds API
     borrowRate: BigDecimal!                 # to get the per block rate, divide by 2102400
-    borrowIndex: BigDecimal!                # the history of the markets borrow index return since inception. (Think S&P 500)
-
-    # Created by Comptroller events
-    usersEntered: [Bytes!]!                 # users who have entered this market
+    cash: BigDecimal                        # the contracts balance of ERC20 or ETH
     collateralFactor: BigDecimal            # factor for the most one can borrow in this market
+    exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
+    interestRateModelAddress: Bytes!        # Address of the interest rate model
+    name: String!                           # name of the cToken
+    numberOfBorrowers: Int!                 # number of borrowers active in the market
+    numberOfSuppliers: Int!                 # number of suppliers active in the market
+    reserves: BigDecimal!                   # reserves accrue by shaving off a small percentage of all borrow interest
+    supplyRate: BigDecimal!                 # to get the per block rate, divide by 2102400
+    symbol: String!                         # symbol of the cToken
+    id: ID!                                 # cToken Address (tokenAddress in compounds api)
+    totalBorrows: BigDecimal!               # total borrows for the market
+    totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
+    underlyingAddress: Bytes!               # underlying token address (eth is 0x0000)
+    underlyingName: String!                 # underlying token name
+    underlyingPrice: BigDecimal!            # 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
+    underlyingSymbol: String!               # underlying token symbol
+
+    # Fields added on top of compounds api
+    accrualBlockNumber: Int!                # block number the market is updated to on ethereum
+    blockTimestamp: Int!                    # timestamp the market was most recently updated at
+    borrowIndex: BigDecimal!                # the history of the markets borrow index return since inception. (Think S&P 500)
+    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
+    underlyingPriceUSD: BigDecimal!         # 19 would mean 1 REP = 19 USD
+    underlyingDecimals: Int!                # undelying decimals
 }
 
 # All data for a user interacting with the protocol
@@ -47,9 +50,10 @@ type User @entity {
     # to date values based on the block delta for market.exchangeRate and market.borrowIndex
     # They do not need to be in the schema, but they will show up in the explorer playground
     #    health: BigDecimal!                                     # If less than 1, the account can be liquidated
-    #    total_borrow_value_in_eth: BigDecimal!                  # total assets supplied by user
-    #    tota_collateral_value_in_eth: BigDecimal!               # total assets borrowed from user
+    #    totalBorrowValueInEth: BigDecimal!                  # total assets supplied by user
+    #    totalCollateralValueInEth: BigDecimal!               # total assets borrowed from user
 }
+
 
 # CToken stats for a single users borrow and supply of an asset
 type CTokenInfo @entity {
@@ -60,6 +64,7 @@ type CTokenInfo @entity {
     transactionHashes: [Bytes!]!            # tx hash of all tx's
     transactionTimes: [Int!]!               # tx time of all tx's
     accrualBlockNumber: Int!                # block number the user balances are updated to
+    enteredMarket: Boolean                  # true if in the market, false if they have exited
 
     cTokenBalance: BigDecimal!              # total ctokens the user owns of this asset (CTOKEN)
     totalUnderlyingSupplied: BigDecimal!    # total amount the user has supplied of the underlying (ERC20/ETH)
@@ -67,7 +72,7 @@ type CTokenInfo @entity {
     userBorrowIndex: BigDecimal!            # the value of the borrowIndex upon users last borrow interaction
     totalUnderlyingBorrowed: BigDecimal!    # total borrow, exclusive of interest (ERC20/ETH)
     totalUnderlyingRepaid: BigDecimal!      # total repaid (ERC20/ETH)
-    storedBorrowBalance: BigDecimal!       # The account borrows total emitted in Borrow or Repay events
+    storedBorrowBalance: BigDecimal!        # The account borrows total emitted in Borrow or Repay events
 
     # The following values are added by the JS Wrapper, and must be calculated with the most up
     # to date values based on the block delta for market.exchangeRate and market.borrowIndex

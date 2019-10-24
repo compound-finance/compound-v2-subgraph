@@ -10,26 +10,37 @@ import {
   NewPriceOracle,
 } from '../types/comptroller/Comptroller'
 
-import { Market, Comptroller } from '../types/schema'
-import { mantissaFactorBD } from './helpers'
+import { Market, Comptroller, User } from '../types/schema'
+import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'
 
 export function handleMarketEntered(event: MarketEntered): void {
-  let id = event.params.cToken.toHexString()
-  let market = Market.load(id)
-  let previousUsers = market.usersEntered
-  previousUsers.push(event.params.account)
-  market.usersEntered = previousUsers
-  market.save()
+  let market = Market.load(event.params.cToken.toHexString())
+  let userID = event.params.account.toHex()
+  let cTokenStats = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
+  cTokenStats.enteredMarket = true
+  cTokenStats.save()
 }
 
 export function handleMarketExited(event: MarketExited): void {
-  let id = event.params.cToken.toHexString()
-  let market = Market.load(id)
-  let previousUsers = market.usersEntered
-  let i = previousUsers.indexOf(event.params.account)
-  previousUsers.splice(i, 1)
-  market.usersEntered = previousUsers
-  market.save()
+  let market = Market.load(event.params.cToken.toHexString())
+  let userID = event.params.account.toHex()
+  let cTokenStats = updateCommonCTokenStats(
+    market.id,
+    market.symbol,
+    userID,
+    event.transaction.hash,
+    event.block.timestamp.toI32(),
+    event.block.number.toI32(),
+  )
+  cTokenStats.enteredMarket = false
+  cTokenStats.save()
 }
 
 export function handleNewCloseFactor(event: NewCloseFactor): void {

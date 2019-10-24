@@ -17,8 +17,10 @@ export function exponentToBigDecimal(decimals: i32): BigDecimal {
  * WBTC = 8
  * all others = 18 */
 export let mantissaFactor = 18
+export let cTokenDecimals = 8
 export let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
 export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
+export let zeroBD = BigDecimal.fromString('0')
 
 export function createCTokenInfo(
   cTokenStatsID: string,
@@ -33,13 +35,14 @@ export function createCTokenInfo(
   cTokenStats.transactionHashes = []
   cTokenStats.transactionTimes = []
   cTokenStats.accrualBlockNumber = 0
-  cTokenStats.cTokenBalance = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingSupplied = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingRedeemed = BigDecimal.fromString('0')
-  cTokenStats.userBorrowIndex = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingBorrowed = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingRepaid = BigDecimal.fromString('0')
-  cTokenStats.storedBorrowBalance = BigDecimal.fromString('0')
+  cTokenStats.cTokenBalance = zeroBD
+  cTokenStats.totalUnderlyingSupplied = zeroBD
+  cTokenStats.totalUnderlyingRedeemed = zeroBD
+  cTokenStats.userBorrowIndex = zeroBD
+  cTokenStats.totalUnderlyingBorrowed = zeroBD
+  cTokenStats.totalUnderlyingRepaid = zeroBD
+  cTokenStats.storedBorrowBalance = zeroBD
+  cTokenStats.enteredMarket = false
   return cTokenStats
 }
 

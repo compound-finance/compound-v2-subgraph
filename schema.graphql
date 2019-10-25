@@ -1,84 +1,134 @@
-# TODO - add in comments for all the fields, so they show up in the explorer
+# Comptroller global variables
 type Comptroller @entity {
-    id: ID!                                 # 1
-    priceOracle: Bytes                      # price oracle address that comptroller uses
-    closeFactor: BigInt                     # factor used to determine repayAmount for liquidating
-    liquidationIncentive: BigInt            # extra % liquidators save for liqudation a user
-    maxAssets: BigInt                       # max assets a single user can enter
+    "ID is set to 1"
+    id: ID!
+    "Address of price oracle the comptroller uses"
+    priceOracle: Bytes
+    "Factor used to determine repayAmount for liquidating"
+    closeFactor: BigInt
+    "The percent bonus liquidators get for liquidating"
+    liquidationIncentive: BigInt
+    "Max assets a single user can enter"
+    maxAssets: BigInt
 }
 
 # Market inforamtion for a CToken
 type Market @entity { # TODO rename to CToken, not market
-    #Fields from compounds API
-    borrowRate: BigDecimal!                 # to get the per block rate, divide by 2102400
-    cash: BigDecimal                        # the contracts balance of ERC20 or ETH
-    collateralFactor: BigDecimal            # factor for the most one can borrow in this market
-    exchangeRate:  BigDecimal!              # exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
-    interestRateModelAddress: Bytes!        # Address of the interest rate model
-    name: String!                           # name of the cToken
-    numberOfBorrowers: Int!                 # number of borrowers active in the market
-    numberOfSuppliers: Int!                 # number of suppliers active in the market
-    reserves: BigDecimal!                   # reserves accrue by shaving off a small percentage of all borrow interest
-    supplyRate: BigDecimal!                 # to get the per block rate, divide by 2102400
-    symbol: String!                         # symbol of the cToken
-    id: ID!                                 # cToken Address (tokenAddress in compounds api)
-    totalBorrows: BigDecimal!               # total borrows for the market
-    totalSupply: BigDecimal!                # cToken total supply. CTokens have 8 decimal points
-    underlyingAddress: Bytes!               # underlying token address (eth is 0x0000)
-    underlyingName: String!                 # underlying token name
-    underlyingPrice: BigDecimal!            # 0.007 DAI/ETH would mean 142.86 DAI = 1 ETH
-    underlyingSymbol: String!               # underlying token symbol
+    #Fields that match compounds API
+    "Yearly borrow rate. With 2102400 blocks per year"
+    borrowRate: BigDecimal!
+    "The cToken contract balance of ERC20 or ETH"
+    cash: BigDecimal
+    "Collateral factor determining how much one can borrow"
+    collateralFactor: BigDecimal
+    "Exchange rate of tokens / cTokens"
+    exchangeRate:  BigDecimal!
+    "Address of the interest rate model"
+    interestRateModelAddress: Bytes!
+    "Name of the cToken"
+    name: String!
+    "Number of borrowers active in the market"
+    numberOfBorrowers: Int!
+    "Number of suppliers active in the market"
+    numberOfSuppliers: Int!
+    "Reserves stored in the contract"
+    reserves: BigDecimal!
+    "Yearly supply rate. With 2104400 blocks per year"
+    supplyRate: BigDecimal!
+    "CToken symbol"
+    symbol: String!
+    "CToken address"
+    id: ID!
+    "Borrows in the market"
+    totalBorrows: BigDecimal!
+    "CToken supply. CTokens have 8 decimals"
+    totalSupply: BigDecimal!
+    "Underlying token address"
+    underlyingAddress: Bytes!
+    "Underlying token name"
+    underlyingName: String!
+    "Underlying price of token in ETH (ex. 0.007 DAI)"
+    underlyingPrice: BigDecimal!
+    "Underlying token symbol"
+    underlyingSymbol: String!
 
-    # Fields added on top of compounds api
-    accrualBlockNumber: Int!                # block number the market is updated to on ethereum
-    blockTimestamp: Int!                    # timestamp the market was most recently updated at
-    borrowIndex: BigDecimal!                # the history of the markets borrow index return since inception. (Think S&P 500)
-    reserveFactor: BigInt!                  # the % of interest earned that goes to the reserves
-    underlyingPriceUSD: BigDecimal!         # 19 would mean 1 REP = 19 USD
-    underlyingDecimals: Int!                # undelying decimals
+    # Fields that are not in compounds api
+    "Block the market is updated to"
+    accrualBlockNumber: Int!
+    "Timestamp the market was most recently updated"
+    blockTimestamp: Int!
+    "The history of the markets borrow index return (Think S&P 500)"
+    borrowIndex: BigDecimal!
+    "The factor determining interest that goes to reserves"
+    reserveFactor: BigInt!
+    "Underlying token price in USD"
+    underlyingPriceUSD: BigDecimal!
+    "Underlying token decimal length"
+    underlyingDecimals: Int!
 }
 
-# All data for a user interacting with the protocol
+# Users within the protocol
 type User @entity {
-    id: ID!                                                 # user eth address
-    cTokens: [CTokenInfo!]! @derivedFrom(field: "user")     # array of CTokenInfo for user
-    countLiquidated: Int!                                   # times this account has been liquidated
-    countLiquidator: Int!                                   # times this account has liquidated others
-    hasBorrowed: Boolean!                                   # true if user has ever borrowed
+    "User ETH address"
+    id: ID!
+    "Array of CTokens user is in"
+    cTokens: [CTokenInfo!]! @derivedFrom(field: "user")
+    "Count user has been liquidated"
+    countLiquidated: Int!
+    "Count user has liquidated others"
+    countLiquidator: Int!
+    "True if user has ever borrowed"
+    hasBorrowed: Boolean!
 
     # The following values are added by the JS Wrapper, and must be calculated with the most up
     # to date values based on the block delta for market.exchangeRate and market.borrowIndex
     # They do not need to be in the schema, but they will show up in the explorer playground
-    #    health: BigDecimal!                                     # If less than 1, the account can be liquidated
-    #    totalBorrowValueInEth: BigDecimal!                  # total assets supplied by user
-    #    totalCollateralValueInEth: BigDecimal!               # total assets borrowed from user
+
+    # health: BigDecimal!                                 # If less than 1, the account can be liquidated
+    # totalBorrowValueInEth: BigDecimal!                  # total assets supplied by user
+    # totalCollateralValueInEth: BigDecimal!              # total assets borrowed from user
 }
 
-
-# CToken stats for a single users borrow and supply of an asset
+# Stats for a users borrow and supply of an asset
 type CTokenInfo @entity {
-    id: ID!                                 # concatenation of the asset name and user eth address (i.e. cDAI-0xdA5d.......)
-    market: Market!                         # market
-    symbol: String!                         # symbol of underlying token
-    user: User!                             # user address for one-to-many relationships
-    transactionHashes: [Bytes!]!            # tx hash of all tx's
-    transactionTimes: [Int!]!               # tx time of all tx's
-    accrualBlockNumber: Int!                # block number the user balances are updated to
-    enteredMarket: Boolean                  # true if in the market, false if they have exited
+    "Concatenation of CToken address and user address"
+    id: ID!
+    "Relation to market"
+    market: Market!
+    "Symbol of underlying token"
+    symbol: String!
+    "Relation to user"
+    user: User!
+    "Hashes of all user transactions"
+    transactionHashes: [Bytes!]!
+    "Times of all user transactions"
+    transactionTimes: [Int!]!
+    "Block number this asset was updated at in the contract"
+    accrualBlockNumber: Int!
+    "True if user is entered, false if they are exited"
+    enteredMarket: Boolean
 
-    cTokenBalance: BigDecimal!              # total ctokens the user owns of this asset (CTOKEN)
-    totalUnderlyingSupplied: BigDecimal!    # total amount the user has supplied of the underlying (ERC20/ETH)
-    totalUnderlyingRedeemed: BigDecimal!    # total amount the user has redeemed of the underlying (ERC20/ETH)
-    userBorrowIndex: BigDecimal!            # the value of the borrowIndex upon users last borrow interaction
-    totalUnderlyingBorrowed: BigDecimal!    # total borrow, exclusive of interest (ERC20/ETH)
-    totalUnderlyingRepaid: BigDecimal!      # total repaid (ERC20/ETH)
-    storedBorrowBalance: BigDecimal!        # The account borrows total emitted in Borrow or Repay events
+    "CToken balance of the user"
+    cTokenBalance: BigDecimal!
+    "Total amount of underlying supplied"
+    totalUnderlyingSupplied: BigDecimal!
+    "Total amount of underling redeemed"
+    totalUnderlyingRedeemed: BigDecimal!
+    "The value of the borrow index upon users last interaction"
+    userBorrowIndex: BigDecimal!
+    "Total amount underlying borrowed, exclusive of interest"
+    totalUnderlyingBorrowed: BigDecimal!
+    "Total amount underlying repaid"
+    totalUnderlyingRepaid: BigDecimal!
+    "Current borrow balance stored in contract (exclusive of interest since accrualBlockNumber)"
+    storedBorrowBalance: BigDecimal!
 
     # The following values are added by the JS Wrapper, and must be calculated with the most up
     # to date values based on the block delta for market.exchangeRate and market.borrowIndex
     # They do not need to be in the schema, but they will show up in the explorer playground
-        # lendBalance: BigDecimal!        # lendBalance =  cTokenBalance * market.exchangeRate
-        # supplyInterest: BigDecimal!     # supplyInterest = lendBalance - totalUnderlyingSupplied + totalUnderlyingRedeemed
-        # borrowBalance: BigDecimal!      # borrowBalance = storedAccountBorrows * market.borrowIndex / userBorrowIndex
-        # borrowInterest: BigDecimal!     # borrowInterest = borrowBalance - totalUnderlyingBorrowed + totalUnderlyingRepaid
+
+    # lendBalance: BigDecimal!        # lendBalance =  cTokenBalance * market.exchangeRate
+    # supplyInterest: BigDecimal!     # supplyInterest = lendBalance - totalUnderlyingSupplied + totalUnderlyingRedeemed
+    # borrowBalance: BigDecimal!      # borrowBalance = storedAccountBorrows * market.borrowIndex / userBorrowIndex
+    # borrowInterest: BigDecimal!     # borrowInterest = borrowBalance - totalUnderlyingBorrowed + totalUnderlyingRepaid
 }

@@ -22,17 +22,10 @@ import {
   createCTokenInfo,
   zeroBD,
 } from './helpers'
-import { log, BigDecimal, Address } from '@graphprotocol/graph-ts/index'
-
-function boolString(bool: boolean): string {
-  return bool ? 'true' : 'false'
-}
 
 /* TODO
- * - handle transfers from the cBAT accounts. They should not have negative balances
  * - ctokenStats is not a good name. It involves borrowing and ctokens. Borrowing is only
  * underlying assets. marketStats is more accurate. but still, it needs to match compounds api
- * - I am getting a decent amount of accounts with negative balances. I need to fix this
  */
 
 /* User supplies assets into market and receives cTokens in exchange
@@ -353,28 +346,6 @@ export function handleTransfer(event: Transfer): void {
       amountUnderlying,
     )
     cTokenStatsTo.save()
-
-    // TODO - delete this later, when it is no longer needed for testing
-    // let testConditions =
-    //   previousCTokenBalanceTo.equals(zeroBD) && cTokenStatsTo.cTokenBalance.gt(zeroBD)
-    // let equalsZero = previousCTokenBalanceTo.equals(zeroBD)
-    // let greaterThanZero = cTokenStatsTo.cTokenBalance.gt(BigDecimal.fromString('0'))
-    // log.info(
-    //   '\n' +
-    //     'Test conditions combined: {}\n' +
-    //     'Prev ctoken balance: {}\n' +
-    //     'Testing prev = zero: {}\n' +
-    //     'Updated ctoken bal is: {}\n' +
-    //     'Testing updated gt zero: {}\n',
-    //
-    //   [
-    //     boolString(testConditions),
-    //     previousCTokenBalanceTo.toString(),
-    //     boolString(equalsZero),
-    //     cTokenStatsTo.cTokenBalance.toString(),
-    //     boolString(greaterThanZero),
-    //   ],
-    // )
 
     if (
       previousCTokenBalanceTo.equals(zeroBD) &&

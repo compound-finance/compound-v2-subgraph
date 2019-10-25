@@ -77,7 +77,6 @@ function getTokenPrice(
 }
 
 // Returns the price of USDC in eth. i.e. 0.005 would mean ETH is $200
-// TODO can I simplfy this, and not call out, and use what is stored in the contract?
 function getUSDCpriceETH(blockNumber: i32): BigDecimal {
   let comptroller = Comptroller.load('1')
   let oracleAddress = comptroller.priceOracle as Address
@@ -252,8 +251,8 @@ export function updateMarket(
       .div(mantissaFactorBD)
       .truncate(mantissaFactor)
 
-    // TODO make the below more robust. technically if it fails, we can calculate
-    //  on our side the value , since supply rate is a derivative of borrow
+    // This fails on only the first call to cZRX. It is unclear why, but otherwise it works.
+    // So we handle it like this.
     let supplyRatePerBlock = contract.try_supplyRatePerBlock()
     if (supplyRatePerBlock.reverted) {
       log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])

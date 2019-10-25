@@ -10,7 +10,7 @@ import {
   NewPriceOracle,
 } from '../types/comptroller/Comptroller'
 
-import { Market, Comptroller, User } from '../types/schema'
+import { Market, Comptroller } from '../types/schema'
 import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'
 
 export function handleMarketEntered(event: MarketEntered): void {

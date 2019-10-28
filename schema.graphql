@@ -13,14 +13,14 @@ type Comptroller @entity {
 }
 
 # Market inforamtion for a CToken
-type Market @entity { # TODO rename to CToken, not market
+type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     #Fields that match compounds API
     "Yearly borrow rate. With 2102400 blocks per year"
     borrowRate: BigDecimal!
     "The cToken contract balance of ERC20 or ETH"
-    cash: BigDecimal
+    cash: BigDecimal!
     "Collateral factor determining how much one can borrow"
-    collateralFactor: BigDecimal
+    collateralFactor: BigDecimal!
     "Exchange rate of tokens / cTokens"
     exchangeRate:  BigDecimal!
     "Address of the interest rate model"
@@ -68,11 +68,11 @@ type Market @entity { # TODO rename to CToken, not market
 }
 
 # Users within the protocol
-type User @entity {
+type Account @entity {
     "User ETH address"
     id: ID!
     "Array of CTokens user is in"
-    cTokens: [CTokenInfo!]! @derivedFrom(field: "user")
+    tokens: [AccountCToken!]! @derivedFrom(field: "account")
     "Count user has been liquidated"
     countLiquidated: Int!
     "Count user has liquidated others"
@@ -84,21 +84,24 @@ type User @entity {
     # to date values based on the block delta for market.exchangeRate and market.borrowIndex
     # They do not need to be in the schema, but they will show up in the explorer playground
 
-    # health: BigDecimal!                                 # If less than 1, the account can be liquidated
-    # totalBorrowValueInEth: BigDecimal!                  # total assets supplied by user
-    # totalCollateralValueInEth: BigDecimal!              # total assets borrowed from user
+    # "If less than 1, the account can be liquidated
+    # health: BigDecimal!
+    # "Total assets supplied by user"
+    # totalBorrowValueInEth: BigDecimal!
+    # "Total assets borrowed from user"
+    # totalCollateralValueInEth: BigDecimal!
 }
 
-# Stats for a users borrow and supply of an asset
-type CTokenInfo @entity {
+# Stats for an accounts borrow and supply of an asset
+type AccountCToken @entity {
     "Concatenation of CToken address and user address"
     id: ID!
     "Relation to market"
     market: Market!
-    "Symbol of underlying token"
+    "Symbol of the cToken"
     symbol: String!
     "Relation to user"
-    user: User!
+    account: Account!
     "Hashes of all user transactions"
     transactionHashes: [Bytes!]!
     "Times of all user transactions"
@@ -106,7 +109,7 @@ type CTokenInfo @entity {
     "Block number this asset was updated at in the contract"
     accrualBlockNumber: Int!
     "True if user is entered, false if they are exited"
-    enteredMarket: Boolean
+    enteredMarket: Boolean!
 
     "CToken balance of the user"
     cTokenBalance: BigDecimal!
@@ -115,7 +118,7 @@ type CTokenInfo @entity {
     "Total amount of underling redeemed"
     totalUnderlyingRedeemed: BigDecimal!
     "The value of the borrow index upon users last interaction"
-    userBorrowIndex: BigDecimal!
+    accountBorrowIndex: BigDecimal!
     "Total amount underlying borrowed, exclusive of interest"
     totalUnderlyingBorrowed: BigDecimal!
     "Total amount underlying repaid"
@@ -127,8 +130,15 @@ type CTokenInfo @entity {
     # to date values based on the block delta for market.exchangeRate and market.borrowIndex
     # They do not need to be in the schema, but they will show up in the explorer playground
 
-    # lendBalance: BigDecimal!        # lendBalance =  cTokenBalance * market.exchangeRate
-    # supplyInterest: BigDecimal!     # supplyInterest = lendBalance - totalUnderlyingSupplied + totalUnderlyingRedeemed
-    # borrowBalance: BigDecimal!      # borrowBalance = storedAccountBorrows * market.borrowIndex / userBorrowIndex
-    # borrowInterest: BigDecimal!     # borrowInterest = borrowBalance - totalUnderlyingBorrowed + totalUnderlyingRepaid
+    # supplyBalanceUnderlying: BigDecimal!
+    # FORMULA: supplyBalanceUnderlying = cTokenBalance * market.exchangeRate
+
+    # lifetimeSupplyInterestAccrued: BigDecimal!
+    # FORMULA: lifetimeSupplyInterestAccrued = supplyBalanceUnderlying - totalUnderlyingSupplied + totalUnderlyingRedeemed
+
+    # borrowBalanceUnderlying: BigDecimal!
+    # FORMULA: borrowBalanceUnderlying = storedBorrowBalance * market.borrowIndex / accountBorrowIndex
+
+    # lifetimeBorrowInterestAccrued: BigDecimal!
+    # FORMULA: lifetimeBorrowInterestAccrued = borrowBalanceUnderlying - totalUnderlyingBorrowed + totalUnderlyingRepaid
 }

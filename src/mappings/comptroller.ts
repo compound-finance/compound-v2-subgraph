@@ -15,11 +15,11 @@ import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'
 
 export function handleMarketEntered(event: MarketEntered): void {
   let market = Market.load(event.params.cToken.toHexString())
-  let userID = event.params.account.toHex()
+  let accountID = event.params.account.toHex()
   let cTokenStats = updateCommonCTokenStats(
     market.id,
     market.symbol,
-    userID,
+    accountID,
     event.transaction.hash,
     event.block.timestamp.toI32(),
     event.block.number.toI32(),
@@ -30,11 +30,11 @@ export function handleMarketEntered(event: MarketEntered): void {
 
 export function handleMarketExited(event: MarketExited): void {
   let market = Market.load(event.params.cToken.toHexString())
-  let userID = event.params.account.toHex()
+  let accountID = event.params.account.toHex()
   let cTokenStats = updateCommonCTokenStats(
     market.id,
     market.symbol,
-    userID,
+    accountID,
     event.transaction.hash,
     event.block.timestamp.toI32(),
     event.block.number.toI32(),

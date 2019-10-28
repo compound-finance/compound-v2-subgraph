@@ -207,13 +207,16 @@ export function updateMarket(
       .toBigDecimal()
       .div(cTokenDecimalsBD)
 
-    // If you call the cDAI contract on etherscan it comes back (2.0 * 10^26)
-    // If you call the cUSDC contract on etherscan it comes back (2.0 * 10^14)
-    // The real value is 0.02. So cDAI is off by 10^28, and cUSDC 10^16
-    // Must div by tokenDecimals, 10^market.underlyingDecimals
-    // Must multiple by ctokenDecimals, 10^8
-    // Must div by mantissa, 10^18
-
+    /* Exchange rate explanation
+       In Practice
+        - If you call the cDAI contract on etherscan it comes back (2.0 * 10^26)
+        - If you call the cUSDC contract on etherscan it comes back (2.0 * 10^14)
+        - The real value is ~0.02. So cDAI is off by 10^28, and cUSDC 10^16
+       How to calculate for tokens with different decimals
+        - Must div by tokenDecimals, 10^market.underlyingDecimals
+        - Must multiply by ctokenDecimals, 10^8
+        - Must div by mantissa, 10^18
+     */
     market.exchangeRate = contract
       .exchangeRateStored()
       .toBigDecimal()

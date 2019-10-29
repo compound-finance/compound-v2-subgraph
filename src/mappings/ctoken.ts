@@ -37,27 +37,8 @@ import {
  *    No need to update cTokenBalance, handleTransfer() will
  */
 export function handleMint(event: Mint): void {
-  let market = Market.load(event.address.toHexString())
-  let accountID = event.params.minter.toHex()
-  let account = Account.load(accountID)
-  if (account == null) {
-    createAccount(accountID)
-  }
-
-  let cTokenStatsID = market.id.concat('-').concat(accountID)
-  let cTokenStats = AccountCToken.load(cTokenStatsID)
-  if (cTokenStats == null) {
-    cTokenStats = createAccountCToken(cTokenStatsID, market.symbol, accountID, market.id)
-  }
-
-  cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied
-    .plus(
-      event.params.mintAmount
-        .toBigDecimal()
-        .div(exponentToBigDecimal(market.underlyingDecimals)),
-    )
-    .truncate(market.underlyingDecimals)
-  cTokenStats.save()
+  // Currently not in use. Everything can be done in handleTransfer, since a Mint event
+  // is always done alongside a Transfer event, with the same data
 }
 
 /*  Account supplies cTokens into market and receives underlying asset in exchange
@@ -73,33 +54,14 @@ export function handleMint(event: Mint): void {
  *    No need to update cTokenBalance, handleTransfer() will
  */
 export function handleRedeem(event: Redeem): void {
-  let market = Market.load(event.address.toHexString())
-  let accountID = event.params.redeemer.toHex()
-  let cTokenStatsID = market.id.concat('-').concat(accountID)
-  let cTokenStats = AccountCToken.load(cTokenStatsID)
-  if (cTokenStats == null) {
-    cTokenStats = createAccountCToken(cTokenStatsID, market.symbol, accountID, market.id)
-  }
-
-  cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed
-    .plus(
-      event.params.redeemAmount
-        .toBigDecimal()
-        .div(exponentToBigDecimal(market.underlyingDecimals)),
-    )
-    .truncate(market.underlyingDecimals)
-
-  cTokenStats.save()
-  let account = Account.load(accountID)
-  if (account == null) {
-    createAccount(accountID)
-  }
+  // Currently not in use. Everything can be done in handleTransfer, since a Redeem event
+  // is always done alongside a Transfer event, with the same data
 }
 
 /* Borrow assets from the protocol. All values either ETH or ERC20
  *
  * event.params.totalBorrows = of the whole market (not used right now)
- * event.params.accountBorrows = total of the account (not used right now)
+ * event.params.accountBorrows = total of the account
  * event.params.borrowAmount = that was added in this event
  * event.params.borrower = the account
  * Notes
@@ -125,7 +87,11 @@ export function handleBorrow(event: Borrow): void {
     .div(exponentToBigDecimal(market.underlyingDecimals))
   let previousBorrow = cTokenStats.storedBorrowBalance
 
-  cTokenStats.storedBorrowBalance = event.params.accountBorrows.toBigDecimal()
+  cTokenStats.storedBorrowBalance = event.params.accountBorrows
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+
   cTokenStats.accountBorrowIndex = market.borrowIndex
   cTokenStats.totalUnderlyingBorrowed = cTokenStats.totalUnderlyingBorrowed.plus(
     borrowAmountBD,
@@ -181,7 +147,11 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
 
-  cTokenStats.storedBorrowBalance = event.params.accountBorrows.toBigDecimal()
+  cTokenStats.storedBorrowBalance = event.params.accountBorrows
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+
   cTokenStats.accountBorrowIndex = market.borrowIndex
   cTokenStats.totalUnderlyingRepaid = cTokenStats.totalUnderlyingRepaid.plus(
     repayAmountBD,
@@ -261,16 +231,14 @@ export function handleTransfer(event: Transfer): void {
     )
   }
 
-  let amountWithDecimals = event.params.amount
-    .toBigDecimal()
-    .div(exponentToBigDecimal(market.underlyingDecimals))
-  let amountUnderlying = market.exchangeRate
-    .times(amountWithDecimals)
-    .truncate(market.underlyingDecimals)
+  let amountUnderlying = market.exchangeRate.times(
+    event.params.amount.toBigDecimal().div(cTokenDecimalsBD),
+  )
+  let amountUnderylingTruncated = amountUnderlying.truncate(market.underlyingDecimals)
 
   let accountFromID = event.params.from.toHex()
 
-  // Checking if the tx is FROM the cToken contract
+  // Checking if the tx is FROM the cToken contract (i.e. this will not run when minting)
   // If so, it is a mint, and we don't need to run these calculations
   if (accountFromID != marketID) {
     let accountFrom = Account.load(accountFromID)
@@ -297,7 +265,7 @@ export function handleTransfer(event: Transfer): void {
     )
 
     cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
-      amountUnderlying,
+      amountUnderylingTruncated,
     )
     cTokenStatsFrom.save()
 
@@ -308,7 +276,7 @@ export function handleTransfer(event: Transfer): void {
   }
 
   let accountToID = event.params.to.toHex()
-  // Checking if the tx is FROM the cToken contract
+  // Checking if the tx is TO the cToken contract (i.e. this will not run when redeeming)
   // If so, we ignore it. this leaves an edge case, where someone who accidentally sends
   // cTokens to a cToken contract, where it will not get recorded. Right now it would
   // be messy to include, so we are leaving it out for now TODO fix this in future
@@ -338,7 +306,7 @@ export function handleTransfer(event: Transfer): void {
     )
 
     cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
-      amountUnderlying,
+      amountUnderylingTruncated,
     )
     cTokenStatsTo.save()
 

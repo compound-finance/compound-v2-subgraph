@@ -2,7 +2,7 @@
 
 // For each division by 10, add one to exponent to truncate one significant figure
 import { BigDecimal, Bytes } from '@graphprotocol/graph-ts/index'
-import { CTokenInfo, User } from '../types/schema'
+import { AccountCToken, Account } from '../types/schema'
 
 export function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -12,61 +12,57 @@ export function exponentToBigDecimal(decimals: i32): BigDecimal {
   return bd
 }
 
-/* Decimals of underlying assets
- * USCD = 6
- * WBTC = 8
- * all others = 18 */
 export let mantissaFactor = 18
+export let cTokenDecimals = 8
 export let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
 export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
+export let zeroBD = BigDecimal.fromString('0')
 
-export function createCTokenInfo(
+export function createAccountCToken(
   cTokenStatsID: string,
   symbol: string,
-  user: string,
+  account: string,
   marketID: string,
-): CTokenInfo {
-  let cTokenStats = new CTokenInfo(cTokenStatsID)
+): AccountCToken {
+  let cTokenStats = new AccountCToken(cTokenStatsID)
   cTokenStats.symbol = symbol
   cTokenStats.market = marketID
-  cTokenStats.user = user
+  cTokenStats.account = account
   cTokenStats.transactionHashes = []
   cTokenStats.transactionTimes = []
   cTokenStats.accrualBlockNumber = 0
-  cTokenStats.cTokenBalance = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingSupplied = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingRedeemed = BigDecimal.fromString('0')
-  cTokenStats.userBorrowIndex = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingBorrowed = BigDecimal.fromString('0')
-  cTokenStats.totalUnderlyingRepaid = BigDecimal.fromString('0')
-  cTokenStats.storedBorrowBalance = BigDecimal.fromString('0')
+  cTokenStats.cTokenBalance = zeroBD
+  cTokenStats.totalUnderlyingSupplied = zeroBD
+  cTokenStats.totalUnderlyingRedeemed = zeroBD
+  cTokenStats.accountBorrowIndex = zeroBD
+  cTokenStats.totalUnderlyingBorrowed = zeroBD
+  cTokenStats.totalUnderlyingRepaid = zeroBD
+  cTokenStats.storedBorrowBalance = zeroBD
+  cTokenStats.enteredMarket = false
   return cTokenStats
 }
 
-export function createUser(userID: string): User {
-  let user = new User(userID)
-  // user.cTokens = []
-  user.countLiquidated = 0
-  user.countLiquidator = 0
-  // user.totalBorrowInEth = BigDecimal.fromString('0')
-  // user.totalSupplyInEth = BigDecimal.fromString('0')
-  user.hasBorrowed = false
-  user.save()
-  return user
+export function createAccount(accountID: string): Account {
+  let account = new Account(accountID)
+  account.countLiquidated = 0
+  account.countLiquidator = 0
+  account.hasBorrowed = false
+  account.save()
+  return account
 }
 
 export function updateCommonCTokenStats(
   marketID: string,
   marketSymbol: string,
-  userID: string,
+  accountID: string,
   txHash: Bytes,
   timestamp: i32,
   blockNumber: i32,
-): CTokenInfo {
-  let cTokenStatsID = marketID.concat('-').concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
+): AccountCToken {
+  let cTokenStatsID = marketID.concat('-').concat(accountID)
+  let cTokenStats = AccountCToken.load(cTokenStatsID)
   if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(cTokenStatsID, marketSymbol, userID, marketID)
+    cTokenStats = createAccountCToken(cTokenStatsID, marketSymbol, accountID, marketID)
   }
   let txHashes = cTokenStats.transactionHashes
   txHashes.push(txHash)
@@ -75,5 +71,5 @@ export function updateCommonCTokenStats(
   txTimes.push(timestamp)
   cTokenStats.transactionTimes = txTimes
   cTokenStats.accrualBlockNumber = blockNumber
-  return cTokenStats as CTokenInfo
+  return cTokenStats as AccountCToken
 }

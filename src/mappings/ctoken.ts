@@ -8,29 +8,26 @@ import {
   Transfer,
   AccrueInterest,
   NewReserveFactor,
+  NewMarketInterestRateModel,
 } from '../types/cREP/CToken'
-import { CTokenInfo, Market, User } from '../types/schema'
+import { AccountCToken, Market, Account } from '../types/schema'
 
-import { updateMarket } from './markets'
+import { createMarket, updateMarket } from './markets'
 import {
-  createUser,
+  createAccount,
   updateCommonCTokenStats,
   exponentToBigDecimal,
   cTokenDecimalsBD,
-  createCTokenInfo,
+  cTokenDecimals,
+  createAccountCToken,
+  zeroBD,
 } from './helpers'
 
-/* TODO
- * handle transfers from the cBAT accounts. They should not have negative balances
- * ctokenStats is not a good name. It involves borrowing and ctokens. Borrowing is only
- * underlying assets. marketStats is more accurate. but still, it needs to match compounds api
- */
-
-/* User supplies assets into market and receives cTokens in exchange
+/* Account supplies assets into market and receives cTokens in exchange
  *
  * event.mintAmount is the underlying asset
  * event.mintTokens is the amount of cTokens minted
- * event.minter is the user
+ * event.minter is the account
  *
  * Notes
  *    Transfer event will always get emitted with this
@@ -40,34 +37,15 @@ import {
  *    No need to update cTokenBalance, handleTransfer() will
  */
 export function handleMint(event: Mint): void {
-  let market = Market.load(event.address.toHexString())
-  let userID = event.params.minter.toHex()
-  let user = User.load(userID)
-  if (user == null) {
-    createUser(userID)
-  }
-
-  let cTokenStatsID = market.id.concat('-').concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
-  if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, userID, market.id)
-  }
-
-  cTokenStats.totalUnderlyingSupplied = cTokenStats.totalUnderlyingSupplied
-    .plus(
-      event.params.mintAmount
-        .toBigDecimal()
-        .div(exponentToBigDecimal(market.underlyingDecimals)),
-    )
-    .truncate(market.underlyingDecimals)
-  cTokenStats.save()
+  // Currently not in use. Everything can be done in handleTransfer, since a Mint event
+  // is always done alongside a Transfer event, with the same data
 }
 
-/*  User supplies cTokens into market and receives underlying asset in exchange
+/*  Account supplies cTokens into market and receives underlying asset in exchange
  *
  *  event.redeemAmount is the underlying asset
  *  event.redeemTokens is the cTokens
- *  event.redeemer is the user
+ *  event.redeemer is the account
  *
  *  Notes
  *    Transfer event will always get emitted with this
@@ -76,48 +54,29 @@ export function handleMint(event: Mint): void {
  *    No need to update cTokenBalance, handleTransfer() will
  */
 export function handleRedeem(event: Redeem): void {
-  let market = Market.load(event.address.toHexString())
-  let userID = event.params.redeemer.toHex()
-  let cTokenStatsID = market.id.concat('-').concat(userID)
-  let cTokenStats = CTokenInfo.load(cTokenStatsID)
-  if (cTokenStats == null) {
-    cTokenStats = createCTokenInfo(cTokenStatsID, market.symbol, userID, market.id)
-  }
-
-  cTokenStats.totalUnderlyingRedeemed = cTokenStats.totalUnderlyingRedeemed
-    .plus(
-      event.params.redeemAmount
-        .toBigDecimal()
-        .div(exponentToBigDecimal(market.underlyingDecimals)),
-    )
-    .truncate(market.underlyingDecimals)
-
-  cTokenStats.save()
-  let user = User.load(userID)
-  if (user == null) {
-    createUser(userID)
-  }
+  // Currently not in use. Everything can be done in handleTransfer, since a Redeem event
+  // is always done alongside a Transfer event, with the same data
 }
 
 /* Borrow assets from the protocol. All values either ETH or ERC20
  *
  * event.params.totalBorrows = of the whole market (not used right now)
- * event.params.accountBorrows = total of the account (not used right now)
+ * event.params.accountBorrows = total of the account
  * event.params.borrowAmount = that was added in this event
- * event.params.borrower = the user
+ * event.params.borrower = the account
  * Notes
  *    No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
  */
 export function handleBorrow(event: Borrow): void {
   let market = Market.load(event.address.toHexString())
-  let userID = event.params.borrower.toHex()
+  let accountID = event.params.borrower.toHex()
 
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
   let cTokenStats = updateCommonCTokenStats(
     market.id,
     market.symbol,
-    userID,
+    accountID,
     event.transaction.hash,
     event.block.timestamp.toI32(),
     event.block.number.toI32(),
@@ -126,23 +85,34 @@ export function handleBorrow(event: Borrow): void {
   let borrowAmountBD = event.params.borrowAmount
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
-  cTokenStats.storedBorrowBalance = event.params.accountBorrows.toBigDecimal()
-  cTokenStats.userBorrowIndex = market.borrowIndex
+  let previousBorrow = cTokenStats.storedBorrowBalance
+
+  cTokenStats.storedBorrowBalance = event.params.accountBorrows
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+
+  cTokenStats.accountBorrowIndex = market.borrowIndex
   cTokenStats.totalUnderlyingBorrowed = cTokenStats.totalUnderlyingBorrowed.plus(
     borrowAmountBD,
   )
   cTokenStats.save()
 
-  let user = User.load(userID)
-  if (user == null) {
-    user = createUser(userID)
+  let account = Account.load(accountID)
+  if (account == null) {
+    account = createAccount(accountID)
   }
-  user.hasBorrowed = true
-  user.save()
-}
+  account.hasBorrowed = true
+  account.save()
 
-// TODO - what happens when someone pays off their full borrow? their index should reset, but does it?
-// their principal borrowed for sure becomes 0
+  if (
+    previousBorrow.equals(zeroBD) &&
+    !event.params.accountBorrows.toBigDecimal().equals(zeroBD) // checking edge case for borrwing 0
+  ) {
+    market.numberOfBorrowers = market.numberOfBorrowers + 1
+    market.save()
+  }
+}
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
  *
@@ -154,17 +124,20 @@ export function handleBorrow(event: Borrow): void {
  *
  * Notes
  *    No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
+ *    Once a account totally repays a borrow, it still has its account interest index set to the
+ *    markets value. We keep this, even though you might think it would reset to 0 upon full
+ *    repay.
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
   let market = Market.load(event.address.toHexString())
-  let userID = event.params.borrower.toHex()
+  let accountID = event.params.borrower.toHex()
 
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
   let cTokenStats = updateCommonCTokenStats(
     market.id,
     market.symbol,
-    userID,
+    accountID,
     event.transaction.hash,
     event.block.timestamp.toI32(),
     event.block.number.toI32(),
@@ -173,21 +146,31 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   let repayAmountBD = event.params.repayAmount
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
-  cTokenStats.storedBorrowBalance = event.params.accountBorrows.toBigDecimal()
-  cTokenStats.userBorrowIndex = market.borrowIndex
+
+  cTokenStats.storedBorrowBalance = event.params.accountBorrows
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+
+  cTokenStats.accountBorrowIndex = market.borrowIndex
   cTokenStats.totalUnderlyingRepaid = cTokenStats.totalUnderlyingRepaid.plus(
     repayAmountBD,
   )
   cTokenStats.save()
 
-  let user = User.load(userID)
-  if (user == null) {
-    createUser(userID)
+  let account = Account.load(accountID)
+  if (account == null) {
+    createAccount(accountID)
+  }
+
+  if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
+    market.numberOfBorrowers = market.numberOfBorrowers - 1
+    market.save()
   }
 }
 
 /*
- * Liquidate a user who has fell below the collateral factor.
+ * Liquidate an account who has fell below the collateral factor.
  *
  * event.params.borrower - the borrower who is getting liquidated of their cTokens
  * event.params.cTokenCollateral - the market ADDRESS of the ctoken being liquidated
@@ -203,20 +186,18 @@ export function handleRepayBorrow(event: RepayBorrow): void {
  *    add liquidation counts in this handler.
  */
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
-  // No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
-  // updateMarket(event.address, event.block.number.toI32())
   let liquidatorID = event.params.liquidator.toHex()
-  let liquidator = User.load(liquidatorID)
+  let liquidator = Account.load(liquidatorID)
   if (liquidator == null) {
-    liquidator = createUser(liquidatorID)
+    liquidator = createAccount(liquidatorID)
   }
   liquidator.countLiquidator = liquidator.countLiquidator + 1
   liquidator.save()
 
   let borrowerID = event.params.borrower.toHex()
-  let borrower = User.load(borrowerID)
+  let borrower = Account.load(borrowerID)
   if (borrower == null) {
-    borrower = createUser(borrowerID)
+    borrower = createAccount(borrowerID)
   }
   borrower.countLiquidated = borrower.countLiquidated + 1
   borrower.save()
@@ -240,81 +221,124 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 export function handleTransfer(event: Transfer): void {
   // We only updateMarket() if accrual block number is not up to date. This will only happen
   // with normal transfers, since mint, redeem, and seize transfers will already run updateMarket()
-  let market = Market.load(event.address.toHexString())
+  let marketID = event.address.toHexString()
+  let market = Market.load(marketID)
   if (market.accrualBlockNumber != event.block.number.toI32()) {
-    market = updateMarket(event.address, event.block.number.toI32())
+    market = updateMarket(
+      event.address,
+      event.block.number.toI32(),
+      event.block.timestamp.toI32(),
+    )
   }
 
-  let userFromID = event.params.from.toHex()
-  let userFrom = User.load(userFromID)
-  if (userFrom == null) {
-    createUser(userFromID)
+  let amountUnderlying = market.exchangeRate.times(
+    event.params.amount.toBigDecimal().div(cTokenDecimalsBD),
+  )
+  let amountUnderylingTruncated = amountUnderlying.truncate(market.underlyingDecimals)
+
+  let accountFromID = event.params.from.toHex()
+
+  // Checking if the tx is FROM the cToken contract (i.e. this will not run when minting)
+  // If so, it is a mint, and we don't need to run these calculations
+  if (accountFromID != marketID) {
+    let accountFrom = Account.load(accountFromID)
+    if (accountFrom == null) {
+      createAccount(accountFromID)
+    }
+
+    // Update cTokenStats common for all events, and return the stats to update unique
+    // values for each event
+    let cTokenStatsFrom = updateCommonCTokenStats(
+      market.id,
+      market.symbol,
+      accountFromID,
+      event.transaction.hash,
+      event.block.timestamp.toI32(),
+      event.block.number.toI32(),
+    )
+
+    cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance.minus(
+      event.params.amount
+        .toBigDecimal()
+        .div(cTokenDecimalsBD)
+        .truncate(cTokenDecimals),
+    )
+
+    cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
+      amountUnderylingTruncated,
+    )
+    cTokenStatsFrom.save()
+
+    if (cTokenStatsFrom.cTokenBalance.equals(zeroBD)) {
+      market.numberOfSuppliers = market.numberOfSuppliers - 1
+      market.save()
+    }
   }
 
-  // Update cTokenStats common for all events, and return the stats to update unique
-  // values for each event
-  let cTokenStatsFrom = updateCommonCTokenStats(
-    market.id,
-    market.symbol,
-    userFromID,
-    event.transaction.hash,
-    event.block.timestamp.toI32(),
-    event.block.number.toI32(),
-  )
+  let accountToID = event.params.to.toHex()
+  // Checking if the tx is TO the cToken contract (i.e. this will not run when redeeming)
+  // If so, we ignore it. this leaves an edge case, where someone who accidentally sends
+  // cTokens to a cToken contract, where it will not get recorded. Right now it would
+  // be messy to include, so we are leaving it out for now TODO fix this in future
+  if (accountToID != marketID) {
+    let accountTo = Account.load(accountToID)
+    if (accountTo == null) {
+      createAccount(accountToID)
+    }
 
-  let amountWithDecimals = event.params.amount
-    .toBigDecimal()
-    .div(exponentToBigDecimal(market.underlyingDecimals))
+    // Update cTokenStats common for all events, and return the stats to update unique
+    // values for each event
+    let cTokenStatsTo = updateCommonCTokenStats(
+      market.id,
+      market.symbol,
+      accountToID,
+      event.transaction.hash,
+      event.block.timestamp.toI32(),
+      event.block.number.toI32(),
+    )
 
-  let amountUnderlying = market.exchangeRate
-    .times(amountWithDecimals)
-    .truncate(market.underlyingDecimals)
+    let previousCTokenBalanceTo = cTokenStatsTo.cTokenBalance
+    cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance.plus(
+      event.params.amount
+        .toBigDecimal()
+        .div(cTokenDecimalsBD)
+        .truncate(cTokenDecimals),
+    )
 
-  cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance
-    .minus(event.params.amount.toBigDecimal())
-    .div(cTokenDecimalsBD)
-    .truncate(market.underlyingDecimals)
+    cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
+      amountUnderylingTruncated,
+    )
+    cTokenStatsTo.save()
 
-  cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
-    amountUnderlying,
-  )
-  cTokenStatsFrom.save()
-
-  let userToID = event.params.to.toHex()
-  let userTo = User.load(userToID)
-  if (userTo == null) {
-    createUser(userToID)
+    if (
+      previousCTokenBalanceTo.equals(zeroBD) &&
+      !event.params.amount.toBigDecimal().equals(zeroBD) // checking edge case for transfers of 0
+    ) {
+      market.numberOfSuppliers = market.numberOfSuppliers + 1
+      market.save()
+    }
   }
-
-  // Update cTokenStats common for all events, and return the stats to update unique
-  // values for each event
-  let cTokenStatsTo = updateCommonCTokenStats(
-    market.id,
-    market.symbol,
-    userToID,
-    event.transaction.hash,
-    event.block.timestamp.toI32(),
-    event.block.number.toI32(),
-  )
-
-  cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance
-    .plus(event.params.amount.toBigDecimal())
-    .div(cTokenDecimalsBD)
-    .truncate(market.underlyingDecimals)
-
-  cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
-    amountUnderlying,
-  )
-  cTokenStatsTo.save()
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {
-  updateMarket(event.address, event.block.number.toI32())
+  updateMarket(event.address, event.block.number.toI32(), event.block.timestamp.toI32())
 }
 
 export function handleNewReserveFactor(event: NewReserveFactor): void {
   let marketID = event.address.toHex()
   let market = Market.load(marketID)
   market.reserveFactor = event.params.newReserveFactorMantissa
+  market.save()
+}
+
+export function handleNewMarketInterestRateModel(
+  event: NewMarketInterestRateModel,
+): void {
+  let marketID = event.address.toHex()
+  let market = Market.load(marketID)
+  if (market == null) {
+    market = createMarket(marketID)
+  }
+  market.interestRateModelAddress = event.params.newInterestRateModel
   market.save()
 }

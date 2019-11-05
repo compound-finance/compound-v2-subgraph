@@ -30,10 +30,10 @@ dataSources:
         - name: ERC20
           file: ./abis/erc20.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -46,6 +46,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: cDAI
     network: mainnet
@@ -72,10 +74,10 @@ dataSources:
         - name: ERC20
           file: ./abis/erc20.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -88,6 +90,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: cETH
     network: mainnet
@@ -112,10 +116,10 @@ dataSources:
         - name: PriceOracle2
           file: ./abis/priceOracle2.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -128,6 +132,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: cREP
     network: mainnet
@@ -154,10 +160,10 @@ dataSources:
         - name: ERC20
           file: ./abis/erc20.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -170,6 +176,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: cUSDC
     network: mainnet
@@ -196,10 +204,10 @@ dataSources:
         - name: ERC20
           file: ./abis/erc20.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -212,6 +220,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: cWBTC
     network: mainnet
@@ -238,10 +248,10 @@ dataSources:
         - name: ERC20
           file: ./abis/erc20.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -254,6 +264,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: cZRX
     network: mainnet
@@ -280,10 +292,10 @@ dataSources:
         - name: ERC20
           file: ./abis/erc20.json
       eventHandlers:
-        - event: Mint(address,uint256,uint256)
-          handler: handleMint
-        - event: Redeem(address,uint256,uint256)
-          handler: handleRedeem
+#        - event: Mint(address,uint256,uint256)
+#          handler: handleMint
+#        - event: Redeem(address,uint256,uint256)
+#          handler: handleRedeem
         - event: Borrow(address,uint256,uint256,uint256)
           handler: handleBorrow
         - event: RepayBorrow(address,address,uint256,uint256,uint256)
@@ -296,6 +308,8 @@ dataSources:
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+        - event: NewMarketInterestRateModel(address,address)
+          handler: handleNewMarketInterestRateModel
   - kind: ethereum/contract
     name: Comptroller
     network: mainnet

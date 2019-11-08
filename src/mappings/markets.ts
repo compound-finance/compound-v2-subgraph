@@ -144,8 +144,8 @@ export function createMarket(marketAddress: string): Market {
     '0x0000000000000000000000000000000000000000',
   )
   market.name = contract.name()
-  market.numberOfBorrowers = 0
-  market.numberOfSuppliers = 0
+  // market.numberOfBorrowers = 0
+  // market.numberOfSuppliers = 0
   market.reserves = zeroBD
   market.supplyRate = zeroBD
   market.symbol = contract.symbol()
@@ -247,7 +247,7 @@ export function updateMarket(
       .truncate(market.underlyingDecimals)
 
     // Must convert to BigDecimal, and remove 10^18 that is used for Exp in Compound Solidity
-    market.supplyRate = contract
+    market.borrowRate = contract
       .borrowRatePerBlock()
       .toBigDecimal()
       .times(BigDecimal.fromString('2102400'))
@@ -259,9 +259,9 @@ export function updateMarket(
     let supplyRatePerBlock = contract.try_supplyRatePerBlock()
     if (supplyRatePerBlock.reverted) {
       log.info('***CALL FAILED*** : cERC20 supplyRatePerBlock() reverted', [])
-      market.borrowRate = zeroBD
+      market.supplyRate = zeroBD
     } else {
-      market.borrowRate = supplyRatePerBlock.value
+      market.supplyRate = supplyRatePerBlock.value
         .toBigDecimal()
         .times(BigDecimal.fromString('2102400'))
         .div(mantissaFactorBD)

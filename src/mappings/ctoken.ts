@@ -105,13 +105,13 @@ export function handleBorrow(event: Borrow): void {
   account.hasBorrowed = true
   account.save()
 
-  if (
-    previousBorrow.equals(zeroBD) &&
-    !event.params.accountBorrows.toBigDecimal().equals(zeroBD) // checking edge case for borrwing 0
-  ) {
-    market.numberOfBorrowers = market.numberOfBorrowers + 1
-    market.save()
-  }
+  // if (
+  //   previousBorrow.equals(zeroBD) &&
+  //   !event.params.accountBorrows.toBigDecimal().equals(zeroBD) // checking edge case for borrwing 0
+  // ) {
+  //   market.numberOfBorrowers = market.numberOfBorrowers + 1
+  //   market.save()
+  // }
 }
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
@@ -163,10 +163,10 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     createAccount(accountID)
   }
 
-  if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
-    market.numberOfBorrowers = market.numberOfBorrowers - 1
-    market.save()
-  }
+  // if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
+  //   market.numberOfBorrowers = market.numberOfBorrowers - 1
+  //   market.save()
+  // }
 }
 
 /*
@@ -269,10 +269,10 @@ export function handleTransfer(event: Transfer): void {
     )
     cTokenStatsFrom.save()
 
-    if (cTokenStatsFrom.cTokenBalance.equals(zeroBD)) {
-      market.numberOfSuppliers = market.numberOfSuppliers - 1
-      market.save()
-    }
+    // if (cTokenStatsFrom.cTokenBalance.equals(zeroBD)) {
+    //   market.numberOfSuppliers = market.numberOfSuppliers - 1
+    //   market.save()
+    // }
   }
 
   let accountToID = event.params.to.toHex()
@@ -310,13 +310,13 @@ export function handleTransfer(event: Transfer): void {
     )
     cTokenStatsTo.save()
 
-    if (
-      previousCTokenBalanceTo.equals(zeroBD) &&
-      !event.params.amount.toBigDecimal().equals(zeroBD) // checking edge case for transfers of 0
-    ) {
-      market.numberOfSuppliers = market.numberOfSuppliers + 1
-      market.save()
-    }
+    // if (
+    //   previousCTokenBalanceTo.equals(zeroBD) &&
+    //   !event.params.amount.toBigDecimal().equals(zeroBD) // checking edge case for transfers of 0
+    // ) {
+    //   market.numberOfSuppliers = market.numberOfSuppliers + 1
+    //   market.save()
+    // }
   }
 }
 

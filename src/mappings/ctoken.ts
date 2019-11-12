@@ -10,7 +10,7 @@ import {
   NewReserveFactor,
   NewMarketInterestRateModel,
 } from '../types/cREP/CToken'
-import { AccountCToken, Market, Account } from '../types/schema'
+import { Market, Account } from '../types/schema'
 
 import { createMarket, updateMarket } from './markets'
 import {
@@ -19,8 +19,6 @@ import {
   exponentToBigDecimal,
   cTokenDecimalsBD,
   cTokenDecimals,
-  createAccountCToken,
-  zeroBD,
 } from './helpers'
 
 /* Account supplies assets into market and receives cTokens in exchange
@@ -70,6 +68,12 @@ export function handleRedeem(event: Redeem): void {
 export function handleBorrow(event: Borrow): void {
   let market = Market.load(event.address.toHexString())
   let accountID = event.params.borrower.toHex()
+  let account = Account.load(accountID)
+  if (account == null) {
+    account = createAccount(accountID)
+  }
+  account.hasBorrowed = true
+  account.save()
 
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
@@ -85,7 +89,7 @@ export function handleBorrow(event: Borrow): void {
   let borrowAmountBD = event.params.borrowAmount
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
-  let previousBorrow = cTokenStats.storedBorrowBalance
+  // let previousBorrow = cTokenStats.storedBorrowBalance
 
   cTokenStats.storedBorrowBalance = event.params.accountBorrows
     .toBigDecimal()
@@ -97,13 +101,6 @@ export function handleBorrow(event: Borrow): void {
     borrowAmountBD,
   )
   cTokenStats.save()
-
-  let account = Account.load(accountID)
-  if (account == null) {
-    account = createAccount(accountID)
-  }
-  account.hasBorrowed = true
-  account.save()
 
   // if (
   //   previousBorrow.equals(zeroBD) &&
@@ -131,6 +128,10 @@ export function handleBorrow(event: Borrow): void {
 export function handleRepayBorrow(event: RepayBorrow): void {
   let market = Market.load(event.address.toHexString())
   let accountID = event.params.borrower.toHex()
+  let account = Account.load(accountID)
+  if (account == null) {
+    createAccount(accountID)
+  }
 
   // Update cTokenStats common for all events, and return the stats to update unique
   // values for each event
@@ -157,11 +158,6 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     repayAmountBD,
   )
   cTokenStats.save()
-
-  let account = Account.load(accountID)
-  if (account == null) {
-    createAccount(accountID)
-  }
 
   // if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
   //   market.numberOfBorrowers = market.numberOfBorrowers - 1
@@ -236,10 +232,9 @@ export function handleTransfer(event: Transfer): void {
   )
   let amountUnderylingTruncated = amountUnderlying.truncate(market.underlyingDecimals)
 
-  let accountFromID = event.params.from.toHex()
-
   // Checking if the tx is FROM the cToken contract (i.e. this will not run when minting)
   // If so, it is a mint, and we don't need to run these calculations
+  let accountFromID = event.params.from.toHex()
   if (accountFromID != marketID) {
     let accountFrom = Account.load(accountFromID)
     if (accountFrom == null) {
@@ -275,11 +270,11 @@ export function handleTransfer(event: Transfer): void {
     // }
   }
 
-  let accountToID = event.params.to.toHex()
   // Checking if the tx is TO the cToken contract (i.e. this will not run when redeeming)
   // If so, we ignore it. this leaves an edge case, where someone who accidentally sends
   // cTokens to a cToken contract, where it will not get recorded. Right now it would
   // be messy to include, so we are leaving it out for now TODO fix this in future
+  let accountToID = event.params.to.toHex()
   if (accountToID != marketID) {
     let accountTo = Account.load(accountToID)
     if (accountTo == null) {

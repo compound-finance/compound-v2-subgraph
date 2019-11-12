@@ -10,12 +10,17 @@ import {
   NewPriceOracle,
 } from '../types/comptroller/Comptroller'
 
-import { Market, Comptroller } from '../types/schema'
-import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'
+import { Market, Comptroller, Account } from '../types/schema'
+import { mantissaFactorBD, updateCommonCTokenStats, createAccount } from './helpers'
 
 export function handleMarketEntered(event: MarketEntered): void {
   let market = Market.load(event.params.cToken.toHexString())
   let accountID = event.params.account.toHex()
+  let account = Account.load(accountID)
+  if (account == null) {
+    createAccount(accountID)
+  }
+
   let cTokenStats = updateCommonCTokenStats(
     market.id,
     market.symbol,
@@ -31,6 +36,11 @@ export function handleMarketEntered(event: MarketEntered): void {
 export function handleMarketExited(event: MarketExited): void {
   let market = Market.load(event.params.cToken.toHexString())
   let accountID = event.params.account.toHex()
+  let account = Account.load(accountID)
+  if (account == null) {
+    createAccount(accountID)
+  }
+
   let cTokenStats = updateCommonCTokenStats(
     market.id,
     market.symbol,

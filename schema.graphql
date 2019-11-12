@@ -27,10 +27,10 @@ type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     interestRateModelAddress: Bytes!
     "Name of the cToken"
     name: String!
-    # "Number of borrowers active in the market"
-    # numberOfBorrowers: Int!
-    # "Number of suppliers active in the market"
-    # numberOfSuppliers: Int!
+    "Number of borrowers active in the market"
+    numberOfBorrowers: Int!
+    "Number of suppliers active in the market"
+    numberOfSuppliers: Int!
     "Reserves stored in the contract"
     reserves: BigDecimal!
     "Yearly supply rate. With 2104400 blocks per year"

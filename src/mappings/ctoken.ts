@@ -89,7 +89,7 @@ export function handleBorrow(event: Borrow): void {
   let borrowAmountBD = event.params.borrowAmount
     .toBigDecimal()
     .div(exponentToBigDecimal(market.underlyingDecimals))
-  // let previousBorrow = cTokenStats.storedBorrowBalance
+  let previousBorrow = cTokenStats.storedBorrowBalance
 
   cTokenStats.storedBorrowBalance = event.params.accountBorrows
     .toBigDecimal()
@@ -102,13 +102,13 @@ export function handleBorrow(event: Borrow): void {
   )
   cTokenStats.save()
 
-  // if (
-  //   previousBorrow.equals(zeroBD) &&
-  //   !event.params.accountBorrows.toBigDecimal().equals(zeroBD) // checking edge case for borrwing 0
-  // ) {
-  //   market.numberOfBorrowers = market.numberOfBorrowers + 1
-  //   market.save()
-  // }
+  if (
+    previousBorrow.equals(zeroBD) &&
+    !event.params.accountBorrows.toBigDecimal().equals(zeroBD) // checking edge case for borrwing 0
+  ) {
+    market.numberOfBorrowers = market.numberOfBorrowers + 1
+    market.save()
+  }
 }
 
 /* Repay some amount borrowed. Anyone can repay anyones balance
@@ -159,10 +159,10 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   )
   cTokenStats.save()
 
-  // if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
-  //   market.numberOfBorrowers = market.numberOfBorrowers - 1
-  //   market.save()
-  // }
+  if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
+    market.numberOfBorrowers = market.numberOfBorrowers - 1
+    market.save()
+  }
 }
 
 /*
@@ -264,10 +264,10 @@ export function handleTransfer(event: Transfer): void {
     )
     cTokenStatsFrom.save()
 
-    // if (cTokenStatsFrom.cTokenBalance.equals(zeroBD)) {
-    //   market.numberOfSuppliers = market.numberOfSuppliers - 1
-    //   market.save()
-    // }
+    if (cTokenStatsFrom.cTokenBalance.equals(zeroBD)) {
+      market.numberOfSuppliers = market.numberOfSuppliers - 1
+      market.save()
+    }
   }
 
   // Checking if the tx is TO the cToken contract (i.e. this will not run when redeeming)
@@ -305,13 +305,13 @@ export function handleTransfer(event: Transfer): void {
     )
     cTokenStatsTo.save()
 
-    // if (
-    //   previousCTokenBalanceTo.equals(zeroBD) &&
-    //   !event.params.amount.toBigDecimal().equals(zeroBD) // checking edge case for transfers of 0
-    // ) {
-    //   market.numberOfSuppliers = market.numberOfSuppliers + 1
-    //   market.save()
-    // }
+    if (
+      previousCTokenBalanceTo.equals(zeroBD) &&
+      !event.params.amount.toBigDecimal().equals(zeroBD) // checking edge case for transfers of 0
+    ) {
+      market.numberOfSuppliers = market.numberOfSuppliers + 1
+      market.save()
+    }
   }
 }
 

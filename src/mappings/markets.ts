@@ -144,8 +144,8 @@ export function createMarket(marketAddress: string): Market {
     '0x0000000000000000000000000000000000000000',
   )
   market.name = contract.name()
-  // market.numberOfBorrowers = 0
-  // market.numberOfSuppliers = 0
+  market.numberOfBorrowers = 0
+  market.numberOfSuppliers = 0
   market.reserves = zeroBD
   market.supplyRate = zeroBD
   market.symbol = contract.symbol()

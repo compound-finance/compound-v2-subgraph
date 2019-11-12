@@ -13,7 +13,7 @@
     "prettier": "./node_modules/.bin/prettier —-write '**/*.ts'"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "0.16.0",
+    "@graphprotocol/graph-cli": "0.16.1",
     "@graphprotocol/graph-ts": "0.16.0",
     "@typescript-eslint/eslint-plugin": "^2.0.0",
     "@typescript-eslint/parser": "^2.0.0",

@@ -19,6 +19,7 @@ import {
   exponentToBigDecimal,
   cTokenDecimalsBD,
   cTokenDecimals,
+  zeroBD,
 } from './helpers'
 
 /* Account supplies assets into market and receives cTokens in exchange

@@ -17,9 +17,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json
@@ -61,9 +63,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json
@@ -105,9 +109,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json
@@ -147,9 +153,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json
@@ -191,9 +199,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json
@@ -235,9 +245,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json
@@ -279,9 +291,11 @@ dataSources:
       language: wasm/assemblyscript
       file: ./src/mappings/ctoken.ts
       entities:
-        - User
+        - Comptroller
+        - Account
         - Market
-        - CTokenInfo
+        - AccountCToken
+        - Transfer
       abis:
         - name: CToken
           file: ./abis/ctoken.json

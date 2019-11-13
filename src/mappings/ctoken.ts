@@ -10,7 +10,7 @@ import {
   NewReserveFactor,
   NewMarketInterestRateModel,
 } from '../types/cREP/CToken'
-import { Market, Account } from '../types/schema'
+import { Market, Account, Transfer as TransferEntity } from '../types/schema'
 
 import { createMarket, updateMarket } from './markets'
 import {
@@ -288,6 +288,20 @@ export function handleTransfer(event: Transfer): void {
     )
     cTokenStatsTo.save()
   }
+
+  let transferID = event.transaction.hash
+    .toHexString()
+    .concat('-')
+    .concat(event.transaction.index.toHexString())
+
+  let transfer = new TransferEntity(transferID)
+  transfer.amount = amountUnderylingTruncated
+  transfer.to = event.params.to
+  transfer.from = event.params.from
+  transfer.blockNumber = event.block.number.toI32()
+  transfer.blockTime = event.block.timestamp.toI32()
+  transfer.tokenSymbol = market.symbol
+  transfer.save()
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {

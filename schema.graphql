@@ -138,3 +138,21 @@ type AccountCToken @entity {
     # lifetimeBorrowInterestAccrued: BigDecimal!
     # FORMULA: lifetimeBorrowInterestAccrued = borrowBalanceUnderlying - totalUnderlyingBorrowed + totalUnderlyingRepaid
 }
+
+# Used to track all mints, borrows, and transfers of cTokens
+type Transfer @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "Tokens transferred"
+    amount: BigDecimal!
+    "Account that received tokens"
+    to: Bytes!
+    "Account that sent tokens"
+    from: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the cToken"
+    tokenSymbol: String!    
+}

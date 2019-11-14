@@ -1,7 +1,7 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
 // For each division by 10, add one to exponent to truncate one significant figure
-import { BigDecimal, Bytes } from '@graphprotocol/graph-ts/index'
+import { BigDecimal, Bytes, Address } from '@graphprotocol/graph-ts/index'
 import { AccountCToken, Account } from '../types/schema'
 
 export function exponentToBigDecimal(decimals: i32): BigDecimal {

@@ -32,7 +32,7 @@ type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     "Yearly supply rate. With 2104400 blocks per year"
     supplyRate: BigDecimal!
     "CToken symbol"
-    symbol: String!
+    symbol: CTokenSymbol!
     "CToken address"
     id: ID!
     "Borrows in the market"
@@ -46,7 +46,7 @@ type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     "Underlying price of token in ETH (ex. 0.007 DAI)"
     underlyingPrice: BigDecimal!
     "Underlying token symbol"
-    underlyingSymbol: String!
+    underlyingSymbol: UnderlyingSymbol!
 
     # Fields that are not in compounds api
     "Block the market is updated to"
@@ -95,7 +95,7 @@ type AccountCToken @entity {
     "Relation to market"
     market: Market!
     "Symbol of the cToken"
-    symbol: String!
+    symbol: CTokenSymbol!
     "Relation to user"
     account: Account!
     "Hashes of all user transactions"
@@ -139,11 +139,11 @@ type AccountCToken @entity {
     # FORMULA: lifetimeBorrowInterestAccrued = borrowBalanceUnderlying - totalUnderlyingBorrowed + totalUnderlyingRepaid
 }
 
-# Used to track all mints, borrows, and transfers of cTokens
-type Transfer @entity {
+# Interface for all types of transfers (basic transfers, mints, redeems, liquidations)
+interface CTokenTransfer {
     "Transaction hash concatenated with log index"
     id: ID!
-    "Tokens transferred"
+    "cTokens transferred"
     amount: BigDecimal!
     "Account that received tokens"
     to: Bytes!
@@ -153,6 +153,162 @@ type Transfer @entity {
     blockNumber: Int!
     "Block time"
     blockTime: Int!
-    "Symbol of the cToken"
-    tokenSymbol: String!    
+    "Symbol of the cToken transferred"
+    cTokenSymbol: CTokenSymbol!    
+}
+
+# Used to track all 4 types of transfers
+type TransferEvent implements CTokenTransfer @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "cTokens transferred"
+    amount: BigDecimal!
+    "Account that received tokens"
+    to: Bytes!
+    "Account that sent tokens"
+    from: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the cToken transferred"
+    cTokenSymbol: CTokenSymbol!    
+}
+
+# Used to track all mints
+type MintEvent implements CTokenTransfer @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "cTokens transferred"
+    amount: BigDecimal!
+    "Account that received tokens (minter)"
+    to: Bytes!
+    "Account that sent tokens (CToken contract)"
+    from: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the cToken transferred"
+    cTokenSymbol: CTokenSymbol!
+    "Underlying token amount transferred"
+    underlyingAmount: BigDecimal
+}
+
+# Used to track all borrows
+type RedeemEvent implements CTokenTransfer @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "cTokens transferred"
+    amount: BigDecimal!
+    "Account that received tokens (CToken contract)"
+    to: Bytes!
+    "Account that sent tokens (redeemer)"
+    from: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the cToken transferred"
+    cTokenSymbol: CTokenSymbol! 
+    "Underlying token amount transferred"
+    underlyingAmount: BigDecimal   
+}
+
+# Used to track all liquidations
+type LiquidationEvent implements CTokenTransfer @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "cTokens seized"
+    amount: BigDecimal!
+    "Liquidator receiving tokens"
+    to: Bytes!
+    "Account being liquidated (borrower)"
+    from: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "cToken that was sezied as collateral"
+    cTokenSymbol: CTokenSymbol!
+    "Symbol of the underlying asset repaid through liquidation"
+    underlyingSymbol: UnderlyingSymbol!
+    "Underlying cToken amount that was repaid by liquidator"
+    underlyingRepayAmount: BigDecimal!
+}
+
+# Interface for borrowing and repaying events
+interface UnderlyingTransfers {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "Amount of underlying borrowed"
+    amount: BigDecimal!
+    "Total borrows of this asset the account has"
+    accountBorrows: BigDecimal!
+    "Account that borrowed the tokens"
+    borrower: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the borrowed underlying asset"
+    underlyingSymbol: UnderlyingSymbol!    
+}
+
+# Used to track all borrows
+type BorrowEvent implements UnderlyingTransfers @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "Amount of underlying borrowed"
+    amount: BigDecimal!
+    "Total borrows of this asset the account has"
+    accountBorrows: BigDecimal!
+    "Account that borrowed the tokens"
+    borrower: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the borrowed underlying asset"
+    underlyingSymbol: UnderlyingSymbol!    
+}
+
+# Used to track all repays
+type RepayEvent implements UnderlyingTransfers @entity {
+    "Transaction hash concatenated with log index"
+    id: ID!
+    "Amount of underlying repaid"
+    amount: BigDecimal!
+    "Total borrows of this asset the account has"
+    accountBorrows: BigDecimal!
+    "Account that borrowed the tokens"
+    borrower: Bytes!
+    "Block number"
+    blockNumber: Int!
+    "Block time"
+    blockTime: Int!
+    "Symbol of the borrowed underlying asset"
+    underlyingSymbol: UnderlyingSymbol!    
+    "Payer of the borrow funds"
+    payer: Bytes! 
+}
+
+enum CTokenSymbol @entity {
+    cETH
+    cDAI
+    cZRX
+    cBAT
+    cWBTC
+    cUSDC
+    cREP
+}
+
+enum UnderlyingSymbol @entity {
+    ETH
+    DAI
+    ZRX
+    BAT
+    WBTC
+    USDC
+    REP
 }

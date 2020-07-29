@@ -8,10 +8,21 @@ import {
   NewLiquidationIncentive,
   NewMaxAssets,
   NewPriceOracle,
-} from '../types/comptroller/Comptroller'
+  MarketListed,
+} from '../types/Comptroller/Comptroller'
 
+import { CToken } from '../types/templates'
 import { Market, Comptroller, Account } from '../types/schema'
 import { mantissaFactorBD, updateCommonCTokenStats, createAccount } from './helpers'
+import { createMarket } from './markets'
+
+export function handleMarketListed(event: MarketListed): void {
+  // Dynamically index all new listed tokens
+  CToken.create(event.params.cToken)
+  // Create the market for this token, since it's now been listed.
+  let market = createMarket(event.params.cToken.toHexString())
+  market.save()
+}
 
 export function handleMarketEntered(event: MarketEntered): void {
   let market = Market.load(event.params.cToken.toHexString())

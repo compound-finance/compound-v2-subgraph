@@ -1,14 +1,14 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
 // For each division by 10, add one to exponent to truncate one significant figure
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts/index'
+import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
 import { Market, Comptroller } from '../types/schema'
 // PriceOracle is valid from Comptroller deployment until block 8498421
-import { PriceOracle } from '../types/cREP/PriceOracle'
+import { PriceOracle } from '../types/templates/CToken/PriceOracle'
 // PriceOracle2 is valid from 8498422 until present block (until another proxy upgrade)
-import { PriceOracle2 } from '../types/cREP/PriceOracle2'
-import { ERC20 } from '../types/cREP/ERC20'
-import { CToken } from '../types/cREP/CToken'
+import { PriceOracle2 } from '../types/templates/CToken/PriceOracle2'
+import { ERC20 } from '../types/templates/CToken/ERC20'
+import { CToken } from '../types/templates/CToken/CToken'
 
 import {
   exponentToBigDecimal,
@@ -136,13 +136,16 @@ export function createMarket(marketAddress: string): Market {
     }
   }
 
+  let interestRateModelAddress = contract.try_interestRateModel()
+  let reserveFactor = contract.try_reserveFactorMantissa()
+
   market.borrowRate = zeroBD
   market.cash = zeroBD
   market.collateralFactor = zeroBD
   market.exchangeRate = zeroBD
-  market.interestRateModelAddress = Address.fromString(
-    '0x0000000000000000000000000000000000000000',
-  )
+  market.interestRateModelAddress = interestRateModelAddress.reverted
+    ? Address.fromString('0x0000000000000000000000000000000000000000')
+    : interestRateModelAddress.value
   market.name = contract.name()
   market.reserves = zeroBD
   market.supplyRate = zeroBD
@@ -154,7 +157,7 @@ export function createMarket(marketAddress: string): Market {
   market.accrualBlockNumber = 0
   market.blockTimestamp = 0
   market.borrowIndex = zeroBD
-  market.reserveFactor = BigInt.fromI32(0)
+  market.reserveFactor = reserveFactor.reverted ? BigInt.fromI32(0) : reserveFactor.value
   market.underlyingPriceUSD = zeroBD
 
   return market

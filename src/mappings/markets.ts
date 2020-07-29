@@ -117,7 +117,7 @@ export function createMarket(marketAddress: string): Market {
     market.underlyingPrice = BigDecimal.fromString('1')
     market.underlyingName = 'Ether'
     market.underlyingSymbol = 'ETH'
-
+    market.underlyingPriceUSD = zeroBD
     // It is all other CERC20 contracts
   } else {
     market = new Market(marketAddress)
@@ -131,6 +131,8 @@ export function createMarket(marketAddress: string): Market {
       market.underlyingName = 'Dai Stablecoin v1.0 (DAI)'
       market.underlyingSymbol = 'DAI'
     }
+    market.underlyingPriceUSD = zeroBD
+    market.underlyingPrice = zeroBD
     if (marketAddress == cUSDCAddress) {
       market.underlyingPriceUSD = BigDecimal.fromString('1')
     }
@@ -152,13 +154,11 @@ export function createMarket(marketAddress: string): Market {
   market.symbol = contract.symbol()
   market.totalBorrows = zeroBD
   market.totalSupply = zeroBD
-  market.underlyingPrice = zeroBD
 
   market.accrualBlockNumber = 0
   market.blockTimestamp = 0
   market.borrowIndex = zeroBD
   market.reserveFactor = reserveFactor.reverted ? BigInt.fromI32(0) : reserveFactor.value
-  market.underlyingPriceUSD = zeroBD
 
   return market
 }

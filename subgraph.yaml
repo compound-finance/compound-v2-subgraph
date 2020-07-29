@@ -23,7 +23,7 @@ dataSources:
         - name: Comptroller
           file: ./abis/comptroller.json
         - name: CToken
-          file: ./abis/cERC20.json
+          file: ./abis/ctoken.json
         - name: PriceOracle
           file: ./abis/priceOracle.json
         - name: PriceOracle2
@@ -64,7 +64,7 @@ templates:
         - CTokenInfo
       abis:
         - name: CToken
-          file: ./abis/cERC20.json
+          file: ./abis/ctoken.json
         - name: PriceOracle
           file: ./abis/priceOracle.json
         - name: PriceOracle2

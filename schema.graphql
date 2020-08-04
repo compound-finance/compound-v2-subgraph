@@ -36,7 +36,7 @@ type Market @entity {
     "Yearly supply rate. With 2104400 blocks per year"
     supplyRate: BigDecimal!
     "CToken symbol"
-    symbol: CTokenSymbol!
+    symbol: String!
     "CToken address"
     id: ID!
     "Borrows in the market"
@@ -50,7 +50,7 @@ type Market @entity {
     "Underlying price of token in ETH (ex. 0.007 DAI)"
     underlyingPrice: BigDecimal!
     "Underlying token symbol"
-    underlyingSymbol: UnderlyingSymbol!
+    underlyingSymbol: String!
 
     # Fields that are not in compounds api
     "Block the market is updated to"
@@ -105,7 +105,7 @@ type AccountCToken @entity {
     "Relation to market"
     market: Market!
     "Symbol of the cToken"
-    symbol: CTokenSymbol!
+    symbol: String!
     "Relation to user"
     account: Account!
     "Hashes of all user transactions"
@@ -150,7 +150,7 @@ type AccountCToken @entity {
 }
 
 """
-An interface for a transfer of any cToken. TransferEvent, MintEvent, 
+An interface for a transfer of any cToken. TransferEvent, MintEvent,
 RedeemEvent, and LiquidationEvent all use this interface
 """
 interface CTokenTransfer {
@@ -167,12 +167,12 @@ interface CTokenTransfer {
     "Block time"
     blockTime: Int!
     "Symbol of the cToken transferred"
-    cTokenSymbol: CTokenSymbol!    
+    cTokenSymbol: String!
 }
 
 """
 TransferEvent will be stored for every mint, redeem, liquidation, and any normal
-transfer between two accounts. 
+transfer between two accounts.
 """
 type TransferEvent implements CTokenTransfer @entity {
     "Transaction hash concatenated with log index"
@@ -188,7 +188,7 @@ type TransferEvent implements CTokenTransfer @entity {
     "Block time"
     blockTime: Int!
     "Symbol of the cToken transferred"
-    cTokenSymbol: CTokenSymbol!    
+    cTokenSymbol: String!
 }
 
 """
@@ -209,13 +209,13 @@ type MintEvent implements CTokenTransfer @entity {
     "Block time"
     blockTime: Int!
     "Symbol of the cToken transferred"
-    cTokenSymbol: CTokenSymbol!
+    cTokenSymbol: String!
     "Underlying token amount transferred"
     underlyingAmount: BigDecimal
 }
 
 """
-RedeemEvent stores information for redeems. To address will always be a 
+RedeemEvent stores information for redeems. To address will always be a
 cToken market address
 """
 type RedeemEvent implements CTokenTransfer @entity {
@@ -232,14 +232,14 @@ type RedeemEvent implements CTokenTransfer @entity {
     "Block time"
     blockTime: Int!
     "Symbol of the cToken transferred"
-    cTokenSymbol: CTokenSymbol! 
+    cTokenSymbol: String!
     "Underlying token amount transferred"
-    underlyingAmount: BigDecimal   
+    underlyingAmount: BigDecimal
 }
 
 """
 LiquidationEvent stores information for liquidations. The event is emitted from
-the cToken market address. 
+the cToken market address.
 """
 type LiquidationEvent implements CTokenTransfer @entity {
     "Transaction hash concatenated with log index"
@@ -255,9 +255,9 @@ type LiquidationEvent implements CTokenTransfer @entity {
     "Block time"
     blockTime: Int!
     "cToken that was sezied as collateral"
-    cTokenSymbol: CTokenSymbol!
+    cTokenSymbol: String!
     "Symbol of the underlying asset repaid through liquidation"
-    underlyingSymbol: UnderlyingSymbol!
+    underlyingSymbol: String!
     "Underlying cToken amount that was repaid by liquidator"
     underlyingRepayAmount: BigDecimal!
 }
@@ -280,7 +280,7 @@ interface UnderlyingTransfer {
     "Block time"
     blockTime: Int!
     "Symbol of the borrowed underlying asset"
-    underlyingSymbol: UnderlyingSymbol!    
+    underlyingSymbol: String!
 }
 
 """
@@ -300,11 +300,11 @@ type BorrowEvent implements UnderlyingTransfer @entity {
     "Block time"
     blockTime: Int!
     "Symbol of the borrowed underlying asset"
-    underlyingSymbol: UnderlyingSymbol!    
+    underlyingSymbol: String!
 }
 
 """
-RepayEvent stores information for repays. Payer is not always the same as 
+RepayEvent stores information for repays. Payer is not always the same as
 borrower, such as in the event of a Liquidation
 """
 type RepayEvent implements UnderlyingTransfer @entity {
@@ -321,33 +321,7 @@ type RepayEvent implements UnderlyingTransfer @entity {
     "Block time"
     blockTime: Int!
     "Symbol of the borrowed underlying asset"
-    underlyingSymbol: UnderlyingSymbol!    
+    underlyingSymbol: String!
     "Payer of the borrow funds"
-    payer: Bytes! 
-}
-
-"""
-CToken symbols used in the Compound Protocol
-"""
-enum CTokenSymbol @entity {
-    cETH
-    cDAI
-    cZRX
-    cBAT
-    cWBTC
-    cUSDC
-    cREP
-}
-
-"""
-Underlying collateral symbols used in the Compound Protocol
-"""
-enum UnderlyingSymbol @entity {
-    ETH
-    DAI
-    ZRX
-    BAT
-    WBTC
-    USDC
-    REP
+    payer: Bytes!
 }

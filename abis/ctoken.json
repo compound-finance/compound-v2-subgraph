@@ -282,6 +282,36 @@
     "signature": "0xf8f9da28"
   },
   {
+    "constant": true,
+    "inputs": [],
+    "name": "reserveFactorMantissa",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x173b9904"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "interestRateModel",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0xf3fdb15a"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {

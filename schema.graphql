@@ -108,12 +108,10 @@ type AccountCToken @entity {
     symbol: String!
     "Relation to user"
     account: Account!
-    "Hashes of all user transactions"
-    transactionHashes: [Bytes!]!
-    "Times of all user transactions"
-    transactionTimes: [Int!]!
+    "Transactions data"
+    transactions: [AccountCTokenTransaction!]! @derivedFrom(field:"account")
     "Block number this asset was updated at in the contract"
-    accrualBlockNumber: Int!
+    accrualBlockNumber: BigInt!
     "True if user is entered, false if they are exited"
     enteredMarket: Boolean!
 
@@ -147,6 +145,23 @@ type AccountCToken @entity {
 
     # lifetimeBorrowInterestAccrued: BigDecimal!
     # FORMULA: lifetimeBorrowInterestAccrued = borrowBalanceUnderlying - totalUnderlyingBorrowed + totalUnderlyingRepaid
+}
+
+"""
+Auxiliary entity for AccountCToken
+"""
+type AccountCTokenTransaction @entity {
+  id: ID!
+
+  account: AccountCToken!
+
+  tx_hash: Bytes!
+
+  timestamp: BigInt!
+
+  block: BigInt!
+
+  logIndex: BigInt!
 }
 
 """

@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "codegen": "graph codegen --output-dir src/types/",
-    "build": "graph build",
+    "build": "graph build --ipfs https://api.staging.thegraph.com/ipfs/ ",
     "create-local": "graph create graphprotocol/compound-v2 --node http://127.0.0.1:8020",
     "deploy-local": "graph deploy graphprotocol/compound-v2 --debug --ipfs http://localhost:5001 --node http://127.0.0.1:8020/",
     "deploy": "graph deploy graphprotocol/compound-v2 --debug --ipfs https://api.thegraph.com/ipfs/ --node https://api.thegraph.com/deploy/",

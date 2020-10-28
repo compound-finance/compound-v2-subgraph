@@ -135,8 +135,9 @@ export function handleBorrow(event: Borrow): void {
     market.symbol,
     accountID,
     event.transaction.hash,
-    event.block.timestamp.toI32(),
-    event.block.number.toI32(),
+    event.block.timestamp,
+    event.block.number,
+    event.logIndex,
   )
 
   let borrowAmountBD = event.params.borrowAmount
@@ -208,8 +209,9 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     market.symbol,
     accountID,
     event.transaction.hash,
-    event.block.timestamp.toI32(),
-    event.block.number.toI32(),
+    event.block.timestamp,
+    event.block.number,
+    event.logIndex,
   )
 
   let repayAmountBD = event.params.repayAmount
@@ -367,8 +369,9 @@ export function handleTransfer(event: Transfer): void {
       market.symbol,
       accountFromID,
       event.transaction.hash,
-      event.block.timestamp.toI32(),
-      event.block.number.toI32(),
+      event.block.timestamp,
+      event.block.number,
+      event.logIndex,
     )
 
     cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance.minus(
@@ -402,8 +405,9 @@ export function handleTransfer(event: Transfer): void {
       market.symbol,
       accountToID,
       event.transaction.hash,
-      event.block.timestamp.toI32(),
-      event.block.number.toI32(),
+      event.block.timestamp,
+      event.block.number,
+      event.logIndex,
     )
 
     cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance.plus(

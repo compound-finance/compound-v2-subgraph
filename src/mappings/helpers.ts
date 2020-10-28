@@ -1,8 +1,8 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
 // For each division by 10, add one to exponent to truncate one significant figure
-import { BigDecimal, Bytes, Address } from '@graphprotocol/graph-ts'
-import { AccountCToken, Account } from '../types/schema'
+import { BigDecimal, BigInt, Bytes, Address } from '@graphprotocol/graph-ts'
+import { AccountCToken, Account, AccountCTokenTransaction } from '../types/schema'
 
 export function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -28,9 +28,7 @@ export function createAccountCToken(
   cTokenStats.symbol = symbol
   cTokenStats.market = marketID
   cTokenStats.account = account
-  cTokenStats.transactionHashes = []
-  cTokenStats.transactionTimes = []
-  cTokenStats.accrualBlockNumber = 0
+  cTokenStats.accrualBlockNumber = BigInt.fromI32(0)
   cTokenStats.cTokenBalance = zeroBD
   cTokenStats.totalUnderlyingSupplied = zeroBD
   cTokenStats.totalUnderlyingRedeemed = zeroBD
@@ -55,21 +53,50 @@ export function updateCommonCTokenStats(
   marketID: string,
   marketSymbol: string,
   accountID: string,
-  txHash: Bytes,
-  timestamp: i32,
-  blockNumber: i32,
+  tx_hash: Bytes,
+  timestamp: BigInt,
+  blockNumber: BigInt,
+  logIndex: BigInt,
 ): AccountCToken {
   let cTokenStatsID = marketID.concat('-').concat(accountID)
   let cTokenStats = AccountCToken.load(cTokenStatsID)
   if (cTokenStats == null) {
     cTokenStats = createAccountCToken(cTokenStatsID, marketSymbol, accountID, marketID)
   }
-  let txHashes = cTokenStats.transactionHashes
-  txHashes.push(txHash)
-  cTokenStats.transactionHashes = txHashes
-  let txTimes = cTokenStats.transactionTimes
-  txTimes.push(timestamp)
-  cTokenStats.transactionTimes = txTimes
+  getOrCreateAccountCTokenTransaction(
+    cTokenStatsID,
+    tx_hash,
+    timestamp,
+    blockNumber,
+    logIndex,
+  )
   cTokenStats.accrualBlockNumber = blockNumber
   return cTokenStats as AccountCToken
+}
+
+export function getOrCreateAccountCTokenTransaction(
+  accountID: string,
+  tx_hash: Bytes,
+  timestamp: BigInt,
+  block: BigInt,
+  logIndex: BigInt,
+): AccountCTokenTransaction {
+  let id = accountID
+    .concat('-')
+    .concat(tx_hash.toHexString())
+    .concat('-')
+    .concat(logIndex.toString())
+  let transaction = AccountCTokenTransaction.load(id)
+
+  if (transaction == null) {
+    transaction = new AccountCTokenTransaction(id)
+    transaction.account = accountID
+    transaction.tx_hash = tx_hash
+    transaction.timestamp = timestamp
+    transaction.block = block
+    transaction.logIndex = logIndex
+    transaction.save()
+  }
+
+  return transaction as AccountCTokenTransaction
 }

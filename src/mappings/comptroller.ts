@@ -41,8 +41,9 @@ export function handleMarketEntered(event: MarketEntered): void {
       market.symbol,
       accountID,
       event.transaction.hash,
-      event.block.timestamp.toI32(),
-      event.block.number.toI32(),
+      event.block.timestamp,
+      event.block.number,
+      event.logIndex,
     )
     cTokenStats.enteredMarket = true
     cTokenStats.save()
@@ -66,8 +67,9 @@ export function handleMarketExited(event: MarketExited): void {
       market.symbol,
       accountID,
       event.transaction.hash,
-      event.block.timestamp.toI32(),
-      event.block.number.toI32(),
+      event.block.timestamp,
+      event.block.number,
+      event.logIndex,
     )
     cTokenStats.enteredMarket = false
     cTokenStats.save()

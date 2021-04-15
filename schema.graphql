@@ -65,6 +65,12 @@ type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     underlyingPriceUSD: BigDecimal!
     "Underlying token decimal length"
     underlyingDecimals: Int!
+
+    # Added to follow interests generation (@Amxx)
+    "Total interest produced by borrowed assets"
+    totalInterestAccumulated: BigDecimal!
+    "Total interest produced by borrowed assets (non decimal value)"
+    totalInterestAccumulatedExact: BigInt!
 }
 
 # Users within the protocol

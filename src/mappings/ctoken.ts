@@ -321,7 +321,20 @@ export function handleTransfer(event: Transfer): void {
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {
-  updateMarket(event.address, event.block.number.toI32(), event.block.timestamp.toI32())
+  let market = updateMarket(
+    event.address,
+    event.block.number.toI32(),
+    event.block.timestamp.toI32(),
+  )
+
+  market.totalInterestAccumulatedExact = market.totalInterestAccumulatedExact.plus(
+    event.params.interestAccumulated,
+  )
+  market.totalInterestAccumulated = market.totalInterestAccumulatedExact
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+  market.save()
 }
 
 export function handleNewReserveFactor(event: NewReserveFactor): void {

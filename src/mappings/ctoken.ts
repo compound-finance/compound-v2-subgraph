@@ -7,6 +7,7 @@ import {
   LiquidateBorrow,
   Transfer,
   AccrueInterest,
+  AccrueInterest1,
   NewReserveFactor,
   NewMarketInterestRateModel,
 } from '../types/cREP/CToken'
@@ -321,6 +322,23 @@ export function handleTransfer(event: Transfer): void {
 }
 
 export function handleAccrueInterest(event: AccrueInterest): void {
+  let market = updateMarket(
+    event.address,
+    event.block.number.toI32(),
+    event.block.timestamp.toI32(),
+  )
+
+  market.totalInterestAccumulatedExact = market.totalInterestAccumulatedExact.plus(
+    event.params.interestAccumulated,
+  )
+  market.totalInterestAccumulated = market.totalInterestAccumulatedExact
+    .toBigDecimal()
+    .div(exponentToBigDecimal(market.underlyingDecimals))
+    .truncate(market.underlyingDecimals)
+  market.save()
+}
+
+export function handleAccrueInterest1(event: AccrueInterest1): void {
   let market = updateMarket(
     event.address,
     event.block.number.toI32(),

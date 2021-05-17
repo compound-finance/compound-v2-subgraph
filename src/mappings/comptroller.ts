@@ -8,7 +8,7 @@ import {
   NewLiquidationIncentive,
   NewMaxAssets,
   NewPriceOracle,
-} from '../types/comptroller/Comptroller'
+} from '../types/Comptroller/Comptroller'
 
 import { Market, Comptroller } from '../types/schema'
 import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'

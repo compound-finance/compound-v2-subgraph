@@ -304,6 +304,8 @@ dataSources:
           handler: handleLiquidateBorrow
         - event: AccrueInterest(uint256,uint256,uint256)
           handler: handleAccrueInterest
+        - event: AccrueInterest(uint256,uint256,uint256,uint256)
+          handler: handleAccrueInterest1
         - event: NewReserveFactor(uint256,uint256)
           handler: handleNewReserveFactor
         - event: Transfer(indexed address,indexed address,uint256)

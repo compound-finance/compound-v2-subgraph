@@ -159,6 +159,9 @@ export function createMarket(marketAddress: string): Market {
   market.reserveFactor = BigInt.fromI32(0)
   market.underlyingPriceUSD = zeroBD
 
+  market.totalInterestAccumulatedExact = BigInt.fromI32(0)
+  market.totalInterestAccumulated = zeroBD
+
   return market
 }
 

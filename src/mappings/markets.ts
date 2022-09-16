@@ -4,11 +4,11 @@
 import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts/index'
 import { Market, Comptroller } from '../types/schema'
 // PriceOracle is valid from Comptroller deployment until block 8498421
-import { PriceOracle } from '../types/cREP/PriceOracle'
+import { PriceOracle } from '../types/cNote/PriceOracle'
 // PriceOracle2 is valid from 8498422 until present block (until another proxy upgrade)
-import { PriceOracle2 } from '../types/cREP/PriceOracle2'
-import { ERC20 } from '../types/cREP/ERC20'
-import { CToken } from '../types/cREP/CToken'
+// import { PriceOracle2 } from '../types/cREP/PriceOracle2'
+import { ERC20 } from '../types/cNote/ERC20'
+import { CToken } from '../types/cNote/CToken'
 
 import {
   exponentToBigDecimal,
@@ -17,10 +17,7 @@ import {
   cTokenDecimalsBD,
   zeroBD,
 } from './helpers'
-
-let cUSDCAddress = '0x39aa39c021dfbae8fac545936693ac917d5e7563'
-let cETHAddress = '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5'
-let daiAddress = '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359'
+import { cCANTO_ADDRESS, cUSDC_ADDRESS } from './consts'
 
 // Used for all cERC20 contracts
 function getTokenPrice(
@@ -32,7 +29,6 @@ function getTokenPrice(
   let comptroller = Comptroller.load('1')
   let oracleAddress = comptroller.priceOracle as Address
   let underlyingPrice: BigDecimal
-  let priceOracle1Address = Address.fromString('02557a5e05defeffd4cae6d83ea3d173b272c904')
 
   /* PriceOracle2 is used at the block the Comptroller starts using it.
    * see here https://etherscan.io/address/0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b#events
@@ -49,30 +45,36 @@ function getTokenPrice(
    * and that they handle the decimals different, which can break the subgraph. So we actually
    * defer to Oracle 1 before block 7715908, which works,
    * until this one is deployed, which was used for 121 days */
-  if (blockNumber > 7715908) {
-    let mantissaDecimalFactor = 18 - underlyingDecimals + 18
-    let bdFactor = exponentToBigDecimal(mantissaDecimalFactor)
-    let oracle2 = PriceOracle2.bind(oracleAddress)
-    underlyingPrice = oracle2
-      .getUnderlyingPrice(eventAddress)
-      .toBigDecimal()
-      .div(bdFactor)
+  /*
+  todo
+    1. how does mantissaDeicmalFactor work
+    2. price oracle abi
+    3. which block: if or else or both?
+  */
+  // if (blockNumber > 7715908) {
+  let mantissaDecimalFactor = 18 - underlyingDecimals + 18
+  let bdFactor = exponentToBigDecimal(mantissaDecimalFactor)
+  let oracle = PriceOracle.bind(oracleAddress)
+  underlyingPrice = oracle
+    .getUnderlyingPrice(eventAddress)
+    .toBigDecimal()
+    .div(bdFactor)
 
-    /* PriceOracle(1) is used (only for the first ~100 blocks of Comptroller. Annoying but we must
-     * handle this. We use it for more than 100 blocks, see reason at top of if statement
-     * of PriceOracle2.
-     *
-     * This must use the token address, not the cToken address.
-     *
-     * Note this returns the value already factoring in token decimals and wei, therefore
-     * we only need to divide by the mantissa, 10^18 */
-  } else {
-    let oracle1 = PriceOracle.bind(priceOracle1Address)
-    underlyingPrice = oracle1
-      .getPrice(underlyingAddress)
-      .toBigDecimal()
-      .div(mantissaFactorBD)
-  }
+  /* PriceOracle(1) is used (only for the first ~100 blocks of Comptroller. Annoying but we must
+   * handle this. We use it for more than 100 blocks, see reason at top of if statement
+   * of PriceOracle2.
+   *
+   * This must use the token address, not the cToken address.
+   *
+   * Note this returns the value already factoring in token decimals and wei, therefore
+   * we only need to divide by the mantissa, 10^18 */
+  // } else {
+  //   let oracle1 = PriceOracle.bind(priceOracle1Address)
+  //   underlyingPrice = oracle1
+  //     .getPrice(underlyingAddress)
+  //     .toBigDecimal()
+  //     .div(mantissaFactorBD)
+  // }
   return underlyingPrice
 }
 
@@ -80,26 +82,32 @@ function getTokenPrice(
 function getUSDCpriceETH(blockNumber: i32): BigDecimal {
   let comptroller = Comptroller.load('1')
   let oracleAddress = comptroller.priceOracle as Address
-  let priceOracle1Address = Address.fromString('02557a5e05defeffd4cae6d83ea3d173b272c904')
+  // let priceOracle1Address = Address.fromString('02557a5e05defeffd4cae6d83ea3d173b272c904')
   let USDCAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 '
   let usdPrice: BigDecimal
 
   // See notes on block number if statement in getTokenPrices()
-  if (blockNumber > 7715908) {
-    let oracle2 = PriceOracle2.bind(oracleAddress)
-    let mantissaDecimalFactorUSDC = 18 - 6 + 18
-    let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
-    usdPrice = oracle2
-      .getUnderlyingPrice(Address.fromString(cUSDCAddress))
-      .toBigDecimal()
-      .div(bdFactorUSDC)
-  } else {
-    let oracle1 = PriceOracle.bind(priceOracle1Address)
-    usdPrice = oracle1
-      .getPrice(Address.fromString(USDCAddress))
-      .toBigDecimal()
-      .div(mantissaFactorBD)
-  }
+  /*
+  todo:
+    1. what is the abi of price oracle is it the same as base v1 router
+    2. how does this mantissa decimal factor work
+    3. is this the correct if block or do we have to use the next one
+  */
+  // if (blockNumber > 7715908) {
+  let oracle = PriceOracle.bind(oracleAddress)
+  let mantissaDecimalFactorUSDC = 18 - 6 + 18
+  let bdFactorUSDC = exponentToBigDecimal(mantissaDecimalFactorUSDC)
+  usdPrice = oracle
+    .getUnderlyingPrice(Address.fromString(cUSDC_ADDRESS))
+    .toBigDecimal()
+    .div(bdFactorUSDC)
+  // } else {
+  //   let oracle1 = PriceOracle.bind(priceOracle1Address)
+  //   usdPrice = oracle1
+  //     .getPrice(Address.fromString(USDCAddress))
+  //     .toBigDecimal()
+  //     .div(mantissaFactorBD)
+  // }
   return usdPrice
 }
 
@@ -108,7 +116,7 @@ export function createMarket(marketAddress: string): Market {
   let contract = CToken.bind(Address.fromString(marketAddress))
 
   // It is CETH, which has a slightly different interface
-  if (marketAddress == cETHAddress) {
+  if (marketAddress == cCANTO_ADDRESS) {
     market = new Market(marketAddress)
     market.underlyingAddress = Address.fromString(
       '0x0000000000000000000000000000000000000000',
@@ -124,14 +132,10 @@ export function createMarket(marketAddress: string): Market {
     market.underlyingAddress = contract.underlying()
     let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
     market.underlyingDecimals = underlyingContract.decimals()
-    if (market.underlyingAddress.toHexString() != daiAddress) {
-      market.underlyingName = underlyingContract.name()
-      market.underlyingSymbol = underlyingContract.symbol()
-    } else {
-      market.underlyingName = 'Dai Stablecoin v1.0 (DAI)'
-      market.underlyingSymbol = 'DAI'
-    }
-    if (marketAddress == cUSDCAddress) {
+    market.underlyingName = underlyingContract.symbol()
+    market.underlyingSymbol = underlyingContract.symbol()
+
+    if (marketAddress == cUSDC_ADDRESS) {
       market.underlyingPriceUSD = BigDecimal.fromString('1')
     }
   }
@@ -180,7 +184,7 @@ export function updateMarket(
     let usdPriceInEth = getUSDCpriceETH(blockNumber)
 
     // if cETH, we only update USD price
-    if (market.id == cETHAddress) {
+    if (market.id == cCANTO_ADDRESS) {
       market.underlyingPriceUSD = market.underlyingPrice
         .div(usdPriceInEth)
         .truncate(market.underlyingDecimals)
@@ -193,7 +197,7 @@ export function updateMarket(
       )
       market.underlyingPrice = tokenPriceEth.truncate(market.underlyingDecimals)
       // if USDC, we only update ETH price
-      if (market.id != cUSDCAddress) {
+      if (market.id != cUSDC_ADDRESS) {
         market.underlyingPriceUSD = market.underlyingPrice
           .div(usdPriceInEth)
           .truncate(market.underlyingDecimals)

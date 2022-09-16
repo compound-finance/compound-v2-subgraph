@@ -9,7 +9,7 @@ import {
   AccrueInterest,
   NewReserveFactor,
   NewMarketInterestRateModel,
-} from '../types/cREP/CToken'
+} from '../types/cNote/CToken'
 import { AccountCToken, Market, Account } from '../types/schema'
 
 import { createMarket, updateMarket } from './markets'

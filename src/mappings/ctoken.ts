@@ -68,7 +68,11 @@ export function handleRedeem(event: Redeem): void {
  *    No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
  */
 export function handleBorrow(event: Borrow): void {
-  let market = Market.load(event.address.toHexString())
+  let marketId = event.address.toHexString()
+  let market = Market.load(marketId)
+  if (market == null) {
+    market = createMarket(marketId)
+  }
   let accountID = event.params.borrower.toHex()
 
   // Update cTokenStats common for all events, and return the stats to update unique
@@ -129,7 +133,11 @@ export function handleBorrow(event: Borrow): void {
  *    repay.
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
-  let market = Market.load(event.address.toHexString())
+  let marketId = event.address.toHexString()
+  let market = Market.load(marketId)
+  if (market == null) {
+    market = createMarket(marketId)
+  }
   let accountID = event.params.borrower.toHex()
 
   // Update cTokenStats common for all events, and return the stats to update unique
@@ -221,8 +229,12 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 export function handleTransfer(event: Transfer): void {
   // We only updateMarket() if accrual block number is not up to date. This will only happen
   // with normal transfers, since mint, redeem, and seize transfers will already run updateMarket()
-  let marketID = event.address.toHexString()
-  let market = Market.load(marketID)
+  let marketId = event.address.toHexString()
+  let market = Market.load(marketId)
+  if (market == null) {
+    market = createMarket(marketId)
+  }
+
   if (market.accrualBlockNumber != event.block.number.toI32()) {
     market = updateMarket(
       event.address,
@@ -240,7 +252,7 @@ export function handleTransfer(event: Transfer): void {
 
   // Checking if the tx is FROM the cToken contract (i.e. this will not run when minting)
   // If so, it is a mint, and we don't need to run these calculations
-  if (accountFromID != marketID) {
+  if (accountFromID != marketId) {
     let accountFrom = Account.load(accountFromID)
     if (accountFrom == null) {
       createAccount(accountFromID)
@@ -280,7 +292,7 @@ export function handleTransfer(event: Transfer): void {
   // If so, we ignore it. this leaves an edge case, where someone who accidentally sends
   // cTokens to a cToken contract, where it will not get recorded. Right now it would
   // be messy to include, so we are leaving it out for now TODO fix this in future
-  if (accountToID != marketID) {
+  if (accountToID != marketId) {
     let accountTo = Account.load(accountToID)
     if (accountTo == null) {
       createAccount(accountToID)
@@ -325,8 +337,11 @@ export function handleAccrueInterest(event: AccrueInterest): void {
 }
 
 export function handleNewReserveFactor(event: NewReserveFactor): void {
-  let marketID = event.address.toHex()
-  let market = Market.load(marketID)
+  let marketId = event.address.toHex()
+  let market = Market.load(marketId)
+  if (market == null) {
+    market = createMarket(marketId)
+  }
   market.reserveFactor = event.params.newReserveFactorMantissa
   market.save()
 }
@@ -334,10 +349,10 @@ export function handleNewReserveFactor(event: NewReserveFactor): void {
 export function handleNewMarketInterestRateModel(
   event: NewMarketInterestRateModel,
 ): void {
-  let marketID = event.address.toHex()
-  let market = Market.load(marketID)
+  let marketId = event.address.toHex()
+  let market = Market.load(marketId)
   if (market == null) {
-    market = createMarket(marketID)
+    market = createMarket(marketId)
   }
   market.interestRateModelAddress = event.params.newInterestRateModel
   market.save()

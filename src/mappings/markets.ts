@@ -17,7 +17,12 @@ import {
   cTokenDecimalsBD,
   zeroBD,
 } from './helpers'
-import { ADDRESS_ZERO, cCANTO_ADDRESS, cUSDC_ADDRESS } from './consts'
+import {
+  ADDRESS_ZERO,
+  cCANTO_ADDRESS,
+  cCANTO_ADDRESS_SMALL_CASE,
+  cUSDC_ADDRESS,
+} from './consts'
 
 // Used for all cERC20 contracts
 function getTokenPrice(
@@ -116,7 +121,7 @@ export function createMarket(marketAddress: string): Market {
   let contract = CToken.bind(Address.fromString(marketAddress))
 
   // It is CETH, which has a slightly different interface
-  if (marketAddress == cCANTO_ADDRESS) {
+  if (marketAddress == cCANTO_ADDRESS || marketAddress == cCANTO_ADDRESS_SMALL_CASE) {
     market = new Market(marketAddress)
     market.underlyingAddress = Address.fromString(
       '0x0000000000000000000000000000000000000000',
@@ -191,7 +196,7 @@ export function updateMarket(
     let usdPriceInEth = getUSDCpriceETH(blockNumber)
 
     // if cETH, we only update USD price
-    if (market.id == cCANTO_ADDRESS) {
+    if (market.id == cCANTO_ADDRESS || market.id == cCANTO_ADDRESS_SMALL_CASE) {
       market.underlyingPriceUSD = market.underlyingPrice
         .div(usdPriceInEth)
         .truncate(market.underlyingDecimals)

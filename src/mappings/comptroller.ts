@@ -1,5 +1,6 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
+import { log } from '@graphprotocol/graph-ts'
 import {
   MarketEntered,
   MarketExited,
@@ -12,6 +13,7 @@ import {
 
 import { Market, Comptroller } from '../types/schema'
 import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'
+import { createMarket } from './markets'
 
 export function handleMarketEntered(event: MarketEntered): void {
   let market = Market.load(event.params.cToken.toHexString())
@@ -50,7 +52,12 @@ export function handleNewCloseFactor(event: NewCloseFactor): void {
 }
 
 export function handleNewCollateralFactor(event: NewCollateralFactor): void {
-  let market = Market.load(event.params.cToken.toHexString())
+  let marketId = event.params.cToken.toHexString()
+  let market = Market.load(marketId)
+  // log.info("CUSTOM handle - " + event.params.cToken.toHexString() + " {}", [market.id])
+  if (market == null) {
+    market = createMarket(marketId)
+  }
   market.collateralFactor = event.params.newCollateralFactorMantissa
     .toBigDecimal()
     .div(mantissaFactorBD)

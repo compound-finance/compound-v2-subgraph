@@ -17,7 +17,7 @@ import {
   cTokenDecimalsBD,
   zeroBD,
 } from './helpers'
-import { cCANTO_ADDRESS, cUSDC_ADDRESS } from './consts'
+import { ADDRESS_ZERO, cCANTO_ADDRESS, cUSDC_ADDRESS } from './consts'
 
 // Used for all cERC20 contracts
 function getTokenPrice(
@@ -129,7 +129,14 @@ export function createMarket(marketAddress: string): Market {
     // It is all other CERC20 contracts
   } else {
     market = new Market(marketAddress)
-    market.underlyingAddress = contract.underlying()
+    let underlyingAddress = Address.fromString(ADDRESS_ZERO)
+    let underlyingAddressResult = contract.try_underlying()
+    if (!underlyingAddressResult.reverted) {
+      underlyingAddress = underlyingAddressResult.value
+    } else {
+      log.info('CUSTOM' + marketAddress.toString(), [])
+    }
+    market.underlyingAddress = underlyingAddress
     let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
     market.underlyingDecimals = underlyingContract.decimals()
     market.underlyingName = underlyingContract.symbol()

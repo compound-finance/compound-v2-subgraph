@@ -235,7 +235,7 @@ dataSources:
     source:
       address: "0xB65Ec550ff356EcA6150F733bA9B954b2e0Ca488"
       abi: CToken
-      startBlock: 743769
+      startBlock: 85394
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3
@@ -325,7 +325,7 @@ dataSources:
     source:
       address: "0xb49A395B39A0b410675406bEE7bD06330CB503E3"
       abi: CToken
-      startBlock: 224958
+      startBlock: 225015
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3

@@ -154,8 +154,8 @@ export function createMarket(marketAddress: string): Market {
     )
     market.underlyingDecimals = 18
     market.underlyingPrice = BigDecimal.fromString('1')
-    market.underlyingName = 'Ether'
-    market.underlyingSymbol = 'ETH'
+    market.underlyingName = 'Canto'
+    market.underlyingSymbol = 'CANTO'
 
     // It is all other CERC20 contracts
   } else {

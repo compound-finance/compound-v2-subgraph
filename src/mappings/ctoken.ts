@@ -13,16 +13,9 @@ import {
 import { AccountCToken, Market, Account } from '../types/schema'
 
 import { createMarket, updateMarket } from './markets'
-import {
-  createAccount,
-  updateCommonCTokenStats,
-  exponentToBigDecimal,
-  cTokenDecimalsBD,
-  cTokenDecimals,
-  createAccountCToken,
-  zeroBD,
-} from './helpers'
+import { createAccount, updateCommonCTokenStats, exponentToBigDecimal } from './helpers'
 import { log } from '@graphprotocol/graph-ts'
+import { cTOKEN_DECIMALS, cTOKEN_DECIMALS_BD, ZERO_BD } from './consts'
 
 /* Account supplies assets into market and receives cTokens in exchange
  *
@@ -112,8 +105,8 @@ export function handleBorrow(event: Borrow): void {
   account.save()
 
   if (
-    previousBorrow.equals(zeroBD) &&
-    !event.params.accountBorrows.toBigDecimal().equals(zeroBD) // checking edge case for borrwing 0
+    previousBorrow.equals(ZERO_BD) &&
+    !event.params.accountBorrows.toBigDecimal().equals(ZERO_BD) // checking edge case for borrwing 0
   ) {
     market.numberOfBorrowers = market.numberOfBorrowers + 1
     market.save()
@@ -174,7 +167,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
     createAccount(accountID)
   }
 
-  if (cTokenStats.storedBorrowBalance.equals(zeroBD)) {
+  if (cTokenStats.storedBorrowBalance.equals(ZERO_BD)) {
     market.numberOfBorrowers = market.numberOfBorrowers - 1
     market.save()
   }
@@ -252,7 +245,7 @@ export function handleTransfer(event: Transfer): void {
   }
 
   let amountUnderlying = market.exchangeRate.times(
-    event.params.amount.toBigDecimal().div(cTokenDecimalsBD),
+    event.params.amount.toBigDecimal().div(cTOKEN_DECIMALS_BD),
   )
   let amountUnderylingTruncated = amountUnderlying.truncate(market.underlyingDecimals)
 
@@ -280,8 +273,8 @@ export function handleTransfer(event: Transfer): void {
     cTokenStatsFrom.cTokenBalance = cTokenStatsFrom.cTokenBalance.minus(
       event.params.amount
         .toBigDecimal()
-        .div(cTokenDecimalsBD)
-        .truncate(cTokenDecimals),
+        .div(cTOKEN_DECIMALS_BD)
+        .truncate(cTOKEN_DECIMALS),
     )
 
     cTokenStatsFrom.totalUnderlyingRedeemed = cTokenStatsFrom.totalUnderlyingRedeemed.plus(
@@ -289,7 +282,7 @@ export function handleTransfer(event: Transfer): void {
     )
     cTokenStatsFrom.save()
 
-    if (cTokenStatsFrom.cTokenBalance.equals(zeroBD)) {
+    if (cTokenStatsFrom.cTokenBalance.equals(ZERO_BD)) {
       market.numberOfSuppliers = market.numberOfSuppliers - 1
       market.save()
     }
@@ -321,8 +314,8 @@ export function handleTransfer(event: Transfer): void {
     cTokenStatsTo.cTokenBalance = cTokenStatsTo.cTokenBalance.plus(
       event.params.amount
         .toBigDecimal()
-        .div(cTokenDecimalsBD)
-        .truncate(cTokenDecimals),
+        .div(cTOKEN_DECIMALS_BD)
+        .truncate(cTOKEN_DECIMALS),
     )
 
     cTokenStatsTo.totalUnderlyingSupplied = cTokenStatsTo.totalUnderlyingSupplied.plus(
@@ -331,8 +324,8 @@ export function handleTransfer(event: Transfer): void {
     cTokenStatsTo.save()
 
     if (
-      previousCTokenBalanceTo.equals(zeroBD) &&
-      !event.params.amount.toBigDecimal().equals(zeroBD) // checking edge case for transfers of 0
+      previousCTokenBalanceTo.equals(ZERO_BD) &&
+      !event.params.amount.toBigDecimal().equals(ZERO_BD) // checking edge case for transfers of 0
     ) {
       market.numberOfSuppliers = market.numberOfSuppliers + 1
       market.save()

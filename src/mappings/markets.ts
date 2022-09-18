@@ -10,21 +10,14 @@ import { PriceOracle } from '../types/cNote/PriceOracle'
 import { ERC20 } from '../types/cNote/ERC20'
 import { CToken } from '../types/cNote/CToken'
 
-import {
-  exponentToBigDecimal,
-  mantissaFactor,
-  mantissaFactorBD,
-  cTokenDecimalsBD,
-  zeroBD,
-  powerToBigDecimal,
-} from './helpers'
+import { exponentToBigDecimal, powerToBigDecimal } from './helpers'
 import {
   ADDRESS_ZERO,
   BaseV1Router_Address,
-  BLOCK_TIME,
   BLOCK_TIME_BD,
   cCANTO_ADDRESS,
   cCANTO_ADDRESS_SMALL_CASE,
+  cTOKEN_DECIMALS_BD,
   cUSDC_ADDRESS,
   DAYS_IN_YEAR,
   DAYS_IN_YEAR_BD,
@@ -33,7 +26,6 @@ import {
   MANTISSA_FACTOR_BD,
   NegOne_BD,
   ONE_BD,
-  SECONDS_IN_DAY,
   SECONDS_IN_DAY_BD,
   ZERO_BD,
 } from './consts'
@@ -186,30 +178,30 @@ export function createMarket(marketAddress: string): Market {
     }
   }
 
-  market.borrowRate = zeroBD
-  market.borrowAPY = zeroBD
-  market.cash = zeroBD
-  market.collateralFactor = zeroBD
-  market.exchangeRate = zeroBD
+  market.borrowRate = ZERO_BD
+  market.borrowAPY = ZERO_BD
+  market.cash = ZERO_BD
+  market.collateralFactor = ZERO_BD
+  market.exchangeRate = ZERO_BD
   market.interestRateModelAddress = Address.fromString(
     '0x0000000000000000000000000000000000000000',
   )
   market.name = contract.name()
   market.numberOfBorrowers = 0
   market.numberOfSuppliers = 0
-  market.reserves = zeroBD
-  market.supplyRate = zeroBD
-  market.supplyAPY = zeroBD
+  market.reserves = ZERO_BD
+  market.supplyRate = ZERO_BD
+  market.supplyAPY = ZERO_BD
   market.symbol = contract.symbol()
-  market.totalBorrows = zeroBD
-  market.totalSupply = zeroBD
-  market.underlyingPrice = zeroBD
+  market.totalBorrows = ZERO_BD
+  market.totalSupply = ZERO_BD
+  market.underlyingPrice = ZERO_BD
 
   market.accrualBlockNumber = 0
   market.blockTimestamp = 0
-  market.borrowIndex = zeroBD
+  market.borrowIndex = ZERO_BD
   market.reserveFactor = BigInt.fromI32(0)
-  market.underlyingPriceUSD = zeroBD
+  market.underlyingPriceUSD = ZERO_BD
 
   return market
 }
@@ -267,7 +259,7 @@ export function updateMarket(
     market.totalSupply = contract
       .totalSupply()
       .toBigDecimal()
-      .div(cTokenDecimalsBD)
+      .div(cTOKEN_DECIMALS_BD)
 
     /* Exchange rate explanation
        In Practice
@@ -283,15 +275,15 @@ export function updateMarket(
       .exchangeRateStored()
       .toBigDecimal()
       .div(exponentToBigDecimal(market.underlyingDecimals))
-      .times(cTokenDecimalsBD)
-      .div(mantissaFactorBD)
-      .truncate(mantissaFactor)
+      .times(cTOKEN_DECIMALS_BD)
+      .div(MANTISSA_FACTOR_BD)
+      .truncate(MANTISSA_FACTOR)
 
     market.borrowIndex = contract
       .borrowIndex()
       .toBigDecimal()
-      .div(mantissaFactorBD)
-      .truncate(mantissaFactor)
+      .div(MANTISSA_FACTOR_BD)
+      .truncate(MANTISSA_FACTOR)
 
     market.reserves = contract
       .totalReserves()

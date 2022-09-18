@@ -19,6 +19,9 @@ export let NegOne_BD = BigDecimal.fromString('-1')
 export const MANTISSA_FACTOR = 18
 export let MANTISSA_FACTOR_BD = BigDecimal.fromString(MANTISSA_FACTOR.toString())
 
+export const cTOKEN_DECIMALS = 8
+export let cTOKEN_DECIMALS_BD = BigDecimal.fromString(cTOKEN_DECIMALS.toString())
+
 export const BLOCK_TIME = 5
 export let BLOCK_TIME_BD = BigDecimal.fromString(BLOCK_TIME.toString())
 

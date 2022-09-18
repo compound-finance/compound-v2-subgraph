@@ -3,6 +3,7 @@
 // For each division by 10, add one to exponent to truncate one significant figure
 import { BigDecimal, Bytes } from '@graphprotocol/graph-ts/index'
 import { AccountCToken, Account } from '../types/schema'
+import { ZERO_BD } from './consts'
 
 export function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -20,11 +21,11 @@ export function powerToBigDecimal(base: BigDecimal, exp: number): BigDecimal {
   return bd
 }
 
-export let mantissaFactor = 18
-export let cTokenDecimals = 8
-export let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
-export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
-export let zeroBD = BigDecimal.fromString('0')
+// export let mantissaFactor = 18
+// export let cTokenDecimals = 8
+// export let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)
+// export let cTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
+// export let zeroBD = BigDecimal.fromString('0')
 
 export function createAccountCToken(
   cTokenStatsID: string,
@@ -39,13 +40,13 @@ export function createAccountCToken(
   cTokenStats.transactionHashes = []
   cTokenStats.transactionTimes = []
   cTokenStats.accrualBlockNumber = 0
-  cTokenStats.cTokenBalance = zeroBD
-  cTokenStats.totalUnderlyingSupplied = zeroBD
-  cTokenStats.totalUnderlyingRedeemed = zeroBD
-  cTokenStats.accountBorrowIndex = zeroBD
-  cTokenStats.totalUnderlyingBorrowed = zeroBD
-  cTokenStats.totalUnderlyingRepaid = zeroBD
-  cTokenStats.storedBorrowBalance = zeroBD
+  cTokenStats.cTokenBalance = ZERO_BD
+  cTokenStats.totalUnderlyingSupplied = ZERO_BD
+  cTokenStats.totalUnderlyingRedeemed = ZERO_BD
+  cTokenStats.accountBorrowIndex = ZERO_BD
+  cTokenStats.totalUnderlyingBorrowed = ZERO_BD
+  cTokenStats.totalUnderlyingRepaid = ZERO_BD
+  cTokenStats.storedBorrowBalance = ZERO_BD
   cTokenStats.enteredMarket = false
   return cTokenStats
 }

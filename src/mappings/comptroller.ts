@@ -12,7 +12,8 @@ import {
 } from '../types/Comptroller/Comptroller'
 
 import { Market, Comptroller } from '../types/schema'
-import { mantissaFactorBD, updateCommonCTokenStats } from './helpers'
+import { MANTISSA_FACTOR_BD } from './consts'
+import { updateCommonCTokenStats } from './helpers'
 import { createMarket } from './markets'
 
 export function handleMarketEntered(event: MarketEntered): void {
@@ -64,7 +65,7 @@ export function handleNewCollateralFactor(event: NewCollateralFactor): void {
   }
   market.collateralFactor = event.params.newCollateralFactorMantissa
     .toBigDecimal()
-    .div(mantissaFactorBD)
+    .div(MANTISSA_FACTOR_BD)
   market.save()
 }
 

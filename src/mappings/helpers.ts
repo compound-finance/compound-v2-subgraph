@@ -12,6 +12,14 @@ export function exponentToBigDecimal(decimals: i32): BigDecimal {
   return bd
 }
 
+export function powerToBigDecimal(base: BigDecimal, exp: number): BigDecimal {
+  let bd = BigDecimal.fromString('1')
+  for (let i = 0; i < exp; i++) {
+    bd = bd.times(base)
+  }
+  return bd
+}
+
 export let mantissaFactor = 18
 export let cTokenDecimals = 8
 export let mantissaFactorBD: BigDecimal = exponentToBigDecimal(18)

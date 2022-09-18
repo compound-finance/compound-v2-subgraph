@@ -15,8 +15,6 @@ type Comptroller @entity {
 # Market inforamtion for a CToken
 type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     #Fields that match compounds API
-    "Yearly borrow rate. With 2102400 blocks per year"
-    borrowRate: BigDecimal!
     "The cToken contract balance of ERC20 or ETH"
     cash: BigDecimal!
     "Collateral factor determining how much one can borrow"
@@ -33,8 +31,14 @@ type Market @entity { # TODO rename to CToken, not market AND ALL OTHERS
     numberOfSuppliers: Int!
     "Reserves stored in the contract"
     reserves: BigDecimal!
-    "Yearly supply rate. With 2104400 blocks per year"
+    "Yearly supply rate. With x blocks per year at 5 s/block"
     supplyRate: BigDecimal!
+    "supply APY"
+    supplyAPY: BigDecimal!
+    "Yearly borrow rate. With x blocks per year at 5 s/block"
+    borrowRate: BigDecimal!
+    "borrow APY"
+    borrowAPY: BigDecimal!
     "CToken symbol"
     symbol: String!
     "CToken address"
